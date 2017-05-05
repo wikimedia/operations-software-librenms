@@ -1,85 +1,150 @@
 <?php
 
- echo("Physical Inventory : ");
+if ($config['enable_inventory']) {
+    echo 'Physical Inventory : ';
 
- if ($config['enable_inventory']) {
+    echo "\nCaching OIDs:";
 
-  echo("\nCaching OIDs:");
-
-  $entity_array = array();
-  echo(" entPhysicalEntry");
-  $entity_array = snmpwalk_cache_oid($device, "entPhysicalEntry", $entity_array, "ENTITY-MIB:CISCO-ENTITY-VENDORTYPE-OID-MIB");
-  echo(" entAliasMappingIdentifier");
-  $entity_array = snmpwalk_cache_twopart_oid($device, "entAliasMappingIdentifier", $entity_array, "ENTITY-MIB:IF-MIB");
-
-  foreach ($entity_array as $entPhysicalIndex => $entry) {
-
-    $entPhysicalDescr                = $entry['entPhysicalDescr'];
-    $entPhysicalContainedIn        = $entry['entPhysicalContainedIn'];
-    $entPhysicalClass                = $entry['entPhysicalClass'];
-    $entPhysicalName                = $entry['entPhysicalName'];
-    $entPhysicalSerialNum        = $entry['entPhysicalSerialNum'];
-    $entPhysicalModelName        = $entry['entPhysicalModelName'];
-    $entPhysicalMfgName                = $entry['entPhysicalMfgName'];
-    $entPhysicalVendorType        = $entry['entPhysicalVendorType'];
-    $entPhysicalParentRelPos        = $entry['entPhysicalParentRelPos'];
-    $entPhysicalHardwareRev         = $entry['entPhysicalHardwareRev'];
-    $entPhysicalFirmwareRev         = $entry['entPhysicalFirmwareRev'];
-    $entPhysicalSoftwareRev         = $entry['entPhysicalSoftwareRev'];
-    $entPhysicalIsFRU                 = $entry['entPhysicalIsFRU'];
-    $entPhysicalAlias             = $entry['entPhysicalAlias'];
-    $entPhysicalAssetID         = $entry['entPhysicalAssetID'];
-
-    if (isset($entity_array['$entPhysicalIndex']['0']['entAliasMappingIdentifier'])) { $ifIndex = $entity_array['$entPhysicalIndex']['0']['entAliasMappingIdentifier']; }
-
-    if (!strpos($ifIndex, "fIndex") || $ifIndex == "") { unset($ifIndex);  }
-    list(,$ifIndex) = explode(".", $ifIndex);
-
-    if ($entPhysicalVendorTypes[$entPhysicalVendorType] && !$entPhysicalModelName)
-    {
-      $entPhysicalModelName = $entPhysicalVendorTypes[$entPhysicalVendorType];
+    if ($device['os'] == 'junos') {
+        $entity_array = array();
+        echo ' jnxBoxAnatomy';
+        $entity_array = snmpwalk_cache_oid($device, 'jnxBoxAnatomy', $entity_array, 'JUNIPER-MIB');
+    }
+    else {
+        $entity_array = array();
+        echo ' entPhysicalEntry';
+        $entity_array = snmpwalk_cache_oid($device, 'entPhysicalEntry', $entity_array, 'ENTITY-MIB:CISCO-ENTITY-VENDORTYPE-OID-MIB');
+        echo ' entAliasMappingIdentifier';
+        $entity_array = snmpwalk_cache_twopart_oid($device, 'entAliasMappingIdentifier', $entity_array, 'ENTITY-MIB:IF-MIB');
     }
 
-    // FIXME - dbFacile
+    foreach ($entity_array as $entPhysicalIndex => $entry) {
+        if ($device['os'] == 'junos') {
+            // Juniper's MIB doesn't have the same objects as the Entity MIB, so some values
+            // are made up here.
+            $entPhysicalDescr        = $entry['jnxContentsDescr'];
+            $entPhysicalContainedIn  = $entry['jnxContainersWithin'];
+            $entPhysicalClass        = $entry['jnxBoxClass'];
+            $entPhysicalName         = $entry['jnxOperatingDescr'];
+            $entPhysicalSerialNum    = $entry['jnxContentsSerialNo'];
+            $entPhysicalModelName    = $entry['jnxContentsPartNo'];
+            $entPhysicalMfgName      = 'Juniper';
+            $entPhysicalVendorType   = 'Juniper';
+            $entPhysicalParentRelPos = -1;
+            $entPhysicalHardwareRev  = $entry['jnxContentsRevision'];
+            $entPhysicalFirmwareRev  = $entry['entPhysicalFirmwareRev'];
+            $entPhysicalSoftwareRev  = $entry['entPhysicalSoftwareRev'];
+            $entPhysicalIsFRU        = $entry['jnxFruType'];
+            $entPhysicalAlias        = $entry['entPhysicalAlias'];
+            $entPhysicalAssetID      = $entry['entPhysicalAssetID'];
+            // fix for issue 1865, $entPhysicalIndex, as it contains a quad dotted number on newer Junipers
+            // using str_replace to remove all dots should fix this even if it changes in future
+	    $entPhysicalIndex = str_replace('.','',$entPhysicalIndex);
+        }
+        else {
+            $entPhysicalDescr        = $entry['entPhysicalDescr'];
+            $entPhysicalContainedIn  = $entry['entPhysicalContainedIn'];
+            $entPhysicalClass        = $entry['entPhysicalClass'];
+            $entPhysicalName         = $entry['entPhysicalName'];
+            $entPhysicalSerialNum    = $entry['entPhysicalSerialNum'];
+            $entPhysicalModelName    = $entry['entPhysicalModelName'];
+            $entPhysicalMfgName      = $entry['entPhysicalMfgName'];
+            $entPhysicalVendorType   = $entry['entPhysicalVendorType'];
+            $entPhysicalParentRelPos = $entry['entPhysicalParentRelPos'];
+            $entPhysicalHardwareRev  = $entry['entPhysicalHardwareRev'];
+            $entPhysicalFirmwareRev  = $entry['entPhysicalFirmwareRev'];
+            $entPhysicalSoftwareRev  = $entry['entPhysicalSoftwareRev'];
+            $entPhysicalIsFRU        = $entry['entPhysicalIsFRU'];
+            $entPhysicalAlias        = $entry['entPhysicalAlias'];
+            $entPhysicalAssetID      = $entry['entPhysicalAssetID'];
+        }//end if
 
-    if ($entPhysicalDescr || $entPhysicalName)
-    {
-      $entPhysical_id = @mysql_result(mysql_query("SELECT entPhysical_id FROM `entPhysical` WHERE device_id = '".$device['device_id']."' AND entPhysicalIndex = '$entPhysicalIndex'"),0);
+        if (isset($entity_array[$entPhysicalIndex]['0']['entAliasMappingIdentifier'])) {
+            $ifIndex = $entity_array[$entPhysicalIndex]['0']['entAliasMappingIdentifier'];
+        }
 
-      if ($entPhysical_id) {
-        $sql =  "UPDATE `entPhysical` SET `ifIndex` = '$ifIndex'";
-        $sql .= ", entPhysicalIndex = '$entPhysicalIndex', entPhysicalDescr = '$entPhysicalDescr', entPhysicalClass = '$entPhysicalClass', entPhysicalName = '$entPhysicalName'";
-        $sql .= ", entPhysicalModelName = '$entPhysicalModelName', entPhysicalSerialNum = '$entPhysicalSerialNum', entPhysicalContainedIn = '$entPhysicalContainedIn'";
-        $sql .= ", entPhysicalMfgName = '$entPhysicalMfgName', entPhysicalParentRelPos = '$entPhysicalParentRelPos', entPhysicalVendorType = '$entPhysicalVendorType'";
-        $sql .= ", entPhysicalHardwareRev = '$entPhysicalHardwareRev', entPhysicalFirmwareRev = '$entPhysicalFirmwareRev', entPhysicalSoftwareRev = '$entPhysicalSoftwareRev'";
-        $sql .= ", entPhysicalIsFRU = '$entPhysicalIsFRU', entPhysicalAlias = '$entPhysicalAlias', entPhysicalAssetID = '$entPhysicalAssetID'";
-        $sql .= " WHERE device_id = '".$device['device_id']."' AND entPhysicalIndex = '$entPhysicalIndex'";
+        if (!strpos($ifIndex, 'fIndex') || $ifIndex == '') {
+            unset($ifIndex);
+        }
+        else {
+            $ifIndex_array = explode('.', $ifIndex);
+            $ifIndex       = $ifIndex_array[1];
+        }
 
-        mysql_query($sql);
-        echo(".");
-      } else {
-        $sql  = "INSERT INTO `entPhysical` (`device_id` , `entPhysicalIndex` , `entPhysicalDescr` , `entPhysicalClass` , `entPhysicalName` , `entPhysicalModelName` , `entPhysicalSerialNum` , `entPhysicalContainedIn`, `entPhysicalMfgName`, `entPhysicalParentRelPos`, `entPhysicalVendorType`, `entPhysicalHardwareRev`,`entPhysicalFirmwareRev`,`entPhysicalSoftwareRev`,`entPhysicalIsFRU`,`entPhysicalAlias`,`entPhysicalAssetID`, `ifIndex`) ";
-        $sql .= "VALUES ( '" . $device['device_id'] . "', '$entPhysicalIndex', '$entPhysicalDescr', '$entPhysicalClass', '$entPhysicalName', '$entPhysicalModelName', '$entPhysicalSerialNum', '$entPhysicalContainedIn', '$entPhysicalMfgName','$entPhysicalParentRelPos' , '$entPhysicalVendorType', '$entPhysicalHardwareRev', '$entPhysicalFirmwareRev', '$entPhysicalSoftwareRev', '$entPhysicalIsFRU', '$entPhysicalAlias', '$entPhysicalAssetID', '$ifIndex')";
-        mysql_query($sql);
-        echo("+");
-      }
+        if ($entPhysicalVendorTypes[$entPhysicalVendorType] && !$entPhysicalModelName) {
+            $entPhysicalModelName = $entPhysicalVendorTypes[$entPhysicalVendorType];
+        }
 
-      $valid[$entPhysicalIndex] = 1;
-    }
-  }
+        // FIXME - dbFacile
+        if ($entPhysicalDescr || $entPhysicalName) {
+            $entPhysical_id = dbFetchCell('SELECT entPhysical_id FROM `entPhysical` WHERE device_id = ? AND entPhysicalIndex = ?', array($device['device_id'], $entPhysicalIndex));
 
- } else { echo("Disabled!"); }
+            if ($entPhysical_id) {
+                $update_data = array(
+                    'entPhysicalIndex'        => $entPhysicalIndex,
+                    'entPhysicalDescr'        => $entPhysicalDescr,
+                    'entPhysicalClass'        => $entPhysicalClass,
+                    'entPhysicalName'         => $entPhysicalName,
+                    'entPhysicalModelName'    => $entPhysicalModelName,
+                    'entPhysicalSerialNum'    => $entPhysicalSerialNum,
+                    'entPhysicalContainedIn'  => $entPhysicalContainedIn,
+                    'entPhysicalMfgName'      => $entPhysicalMfgName,
+                    'entPhysicalParentRelPos' => $entPhysicalParentRelPos,
+                    'entPhysicalVendorType'   => $entPhysicalVendorType,
+                    'entPhysicalHardwareRev'  => $entPhysicalHardwareRev,
+                    'entPhysicalFirmwareRev'  => $entPhysicalFirmwareRev,
+                    'entPhysicalSoftwareRev'  => $entPhysicalSoftwareRev,
+                    'entPhysicalIsFRU'        => $entPhysicalIsFRU,
+                    'entPhysicalAlias'        => $entPhysicalAlias,
+                    'entPhysicalAssetID'      => $entPhysicalAssetID,
+                );
+                dbUpdate($update_data, 'entPhysical', 'device_id=? AND entPhysicalIndex=?', array($device['device_id'], $entPhysicalIndex));
+                echo '.';
+            }
+            else {
+                $insert_data = array(
+                    'device_id'               => $device['device_id'],
+                    'entPhysicalIndex'        => $entPhysicalIndex,
+                    'entPhysicalDescr'        => $entPhysicalDescr,
+                    'entPhysicalClass'        => $entPhysicalClass,
+                    'entPhysicalName'         => $entPhysicalName,
+                    'entPhysicalModelName'    => $entPhysicalModelName,
+                    'entPhysicalSerialNum'    => $entPhysicalSerialNum,
+                    'entPhysicalContainedIn'  => $entPhysicalContainedIn,
+                    'entPhysicalMfgName'      => $entPhysicalMfgName,
+                    'entPhysicalParentRelPos' => $entPhysicalParentRelPos,
+                    'entPhysicalVendorType'   => $entPhysicalVendorType,
+                    'entPhysicalHardwareRev'  => $entPhysicalHardwareRev,
+                    'entPhysicalFirmwareRev'  => $entPhysicalFirmwareRev,
+                    'entPhysicalSoftwareRev'  => $entPhysicalSoftwareRev,
+                    'entPhysicalIsFRU'        => $entPhysicalIsFRU,
+                    'entPhysicalAlias'        => $entPhysicalAlias,
+                    'entPhysicalAssetID'      => $entPhysicalAssetID,
+                );
 
-  $sql = "SELECT * FROM `entPhysical` WHERE `device_id`  = '".$device['device_id']."'";
-  $query = mysql_query($sql);
-  while ($test = mysql_fetch_assoc($query)) {
+                if (!empty($ifIndex)) {
+                    $insert_data['ifIndex'] = $ifIndex;
+                }
+
+                dbInsert($insert_data, 'entPhysical');
+                echo '+';
+            }//end if
+
+            $valid[$entPhysicalIndex] = 1;
+        }//end if
+    }//end foreach
+}
+else {
+    echo 'Disabled!';
+}//end if
+
+$sql = "SELECT * FROM `entPhysical` WHERE `device_id`  = '".$device['device_id']."'";
+foreach (dbFetchRows($sql) as $test) {
     $id = $test['entPhysicalIndex'];
     if (!$valid[$id]) {
-      echo("-");
-      mysql_query("DELETE FROM `entPhysical` WHERE entPhysical_id = '".$test['entPhysical_id']."'");
+        echo '-';
+        dbDelete('entPhysical', 'entPhysical_id = ?', array($test['entPhysical_id']));
     }
-  }
+}
 
- echo("\n");
-
-?>
+echo "\n";

@@ -1,8 +1,8 @@
 <?php
 
-include("includes/graphs/common.inc.php");
+require 'includes/graphs/common.inc.php';
 
-$rrd_filename = $config['rrd_dir'] . "/" . $device['hostname'] . "/ucd_mem.rrd";
+$rrd_filename = $config['rrd_dir'].'/'.$device['hostname'].'/ucd_mem.rrd';
 
 $rrd_options .= " '-b 1024'";
 
@@ -73,7 +73,7 @@ $rrd_options .= " 'COMMENT: \\n'";
 
 $rrd_options .= " 'LINE1:usedreal#d0b080:'";
 
-$rrd_options .= " 'AREA:shared#afeced::'";
+$rrd_options .= " 'AREA:shared#afeced:'";
 $rrd_options .= " 'AREA:buffered#cc0000::STACK'";
 $rrd_options .= " 'AREA:cached#ffaa66::STACK'";
 
@@ -98,5 +98,3 @@ $rrd_options .= " 'GPRINT:cached_perc:LAST:%3.0lf%%\\n'";
 $rrd_options .= " 'LINE1:totalreal#050505:'";
 $rrd_options .= " 'LINE1:totalreal#050505:Total'";
 $rrd_options .= " 'GPRINT:totalreal:AVERAGE:  %6.2lf%sB\\n'";
-
-?>

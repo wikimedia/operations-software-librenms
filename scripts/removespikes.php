@@ -656,6 +656,7 @@ function outputStatistics($rra) {
 
 function updateXML(&$output, &$rra) {
 	global $numspike, $percent, $avgnan, $method, $total_kills;
+        $new_array = array();
 
 	/* variance subroutine */
 	$rra_num = 0;
@@ -732,6 +733,7 @@ function updateXML(&$output, &$rra) {
 }
 
 function removeComments(&$output) {
+    $new_array = array();
 	if (sizeof($output)) {
 		foreach($output as $line) {
 			$line = trim($line);
@@ -797,6 +799,7 @@ function debug($string) {
 
 function standard_deviation($samples) {
 	$sample_count = count($samples);
+        $sample_square = array();
 
 	for ($current_sample = 0; $sample_count > $current_sample; ++$current_sample) {
 		$sample_square[$current_sample] = pow($samples[$current_sample], 2);

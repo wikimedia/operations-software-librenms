@@ -10,7 +10,7 @@
     //              Add the WatchMailLog Daemon to the rc.local so its start on server boot
     //              Run the WatchMailLog Daemon to start grabbing statistics from log files
     //              Add the following to your snmpd.conf file:
-    //              extend mailwatch /opt/observium/scripts/mailwatch.php
+    //              extend mailwatch /opt/librenms/scripts/mailwatch.php
     ///
     //      Version 1.0 By:
     //              All In One - Dennis de Houx <info@all-in-one.be>
@@ -43,6 +43,7 @@
 		    }
 		}
 	    }
+            $var = array();
 	    $var['mess_recv']		= (isset($stats['mess_recv']) ? $stats['mess_recv'] : "U");
 	    $var['mess_rejected']	= (isset($stats['mess_rejected']) ? $stats['mess_rejected'] : "U");
 	    $var['mess_relay']		= (isset($stats['mess_relay']) ? $stats['mess_relay'] : "U");
@@ -56,7 +57,7 @@
 	}
 	
 	function clearStats($mailstats) {
-	    if (file_exists($mailstats) {
+	    if (file_exists($mailstats)) {
 		$fp	= fopen($mailstats, 'w');
 		fwrite($fp, "mess_recv:0\n");
 		fwrite($fp, "mess_rejected:0\n");

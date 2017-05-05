@@ -9,9 +9,9 @@
     //      Install:
     //              Edit the shoutcast.conf file
     //              Add a crontab (every 5 min) for:
-    //              /opt/observium/scripts/shoutcast.php makeCache
+    //              /opt/librenms/scripts/shoutcast.php makeCache
     //              Add the following to your snmpd.conf file:
-    //              extend shoutcast /opt/observium/scripts/shoutcast.php
+    //              extend shoutcast /opt/librenms/scripts/shoutcast.php
     ///
     //      Version 1.1 By:
     //              All In One - Dennis de Houx <info@all-in-one.be>
@@ -40,7 +40,7 @@
 	$cmd	= (isset($_SERVER['argv'][1]) ? $_SERVER['argv'][1] : "");
 
 	function get_data($host, $port) {
-	    $fp		= @fsockopen($host, $port, &$errno, &$errstr, 5);
+	    $fp		= @fsockopen($host, $port, $errno, $errstr, 5);
 	    if(!$fp) { $connect = 0; }
 	    if (!isset($connect)) {
 		fputs($fp, "GET /7.html HTTP/1.0\r\n"
@@ -73,6 +73,7 @@
 	function doSNMPv2($vars) {
 	    $res = array();
 	    foreach ($vars as $items=>$server) {
+                $var = array();
 		$var['bitrate']		= (isset($server['5']) ? (($server['5'] / 8) * 1000) : "0");
 		//$var['bitrate']		= (isset($server['5']) ? ($server['5'] * 1024) : "0");
 		$var['traf_in']		= (isset($server['1']) ? ($var['bitrate'] * $server['1']) : "0");

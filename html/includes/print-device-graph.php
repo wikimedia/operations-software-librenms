@@ -1,19 +1,26 @@
 <?php
-
-if(empty($graph_array['type'])) { $graph_array['type'] = $graph_type; }
-if(empty($graph_array['device']))   { $graph_array['device'] = $device['device_id']; }
-
+if (empty($graph_array['type'])) {
+    $graph_array['type'] = $graph_type;
+}
+if (empty($graph_array['device'])) {
+    $graph_array['device'] = $device['device_id'];
+}
 // FIXME not css alternating yet
-if (!is_integer($g_i/2)) { $row_colour = $list_colour_a; } else { $row_colour = $list_colour_b; }
+if (!is_integer($g_i / 2)) {
+    $row_colour = $list_colour_a;
+}
+else {
+    $row_colour = $list_colour_b;
+}
+echo '<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">'.$graph_title.'</h3>
+    </div>
+    <div class="panel-body">
+';
 
-echo('<div style="background-color: '.$row_colour.';">');
-echo('<div style="padding:4px 0px 0px 8px;" class=graphhead>'.$graph_title.'</div>');
+require 'includes/print-graphrow.inc.php';
 
-include("includes/print-graphrow.inc.php");
-
-echo('</div>');
-
+echo '</div>';
+echo '</div>';
 $g_i++;
-
-?>
-

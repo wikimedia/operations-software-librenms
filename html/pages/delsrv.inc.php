@@ -1,46 +1,41 @@
 <?php
 
-if ($_SESSION['userlevel'] < '5')
-{
-  include("includes/error-no-perm.inc.php");
-} else {
+if ($_SESSION['userlevel'] < '5') {
+    include 'includes/error-no-perm.inc.php';
+}
+else {
+    $pagetitle[] = 'Delete service';
 
-  $pagetitle[] = "Delete service";
-
-  if ($_POST['delsrv'])
-  {
-    if ($_SESSION['userlevel'] > "5")
-    {
-      include("includes/service-delete.inc.php");
+    if ($_POST['delsrv']) {
+        if ($_SESSION['userlevel'] > '5') {
+            include 'includes/service-delete.inc.php';
+        }
     }
-  }
 
-  foreach (dbFetchRows("SELECT * FROM `services` AS S, `devices` AS D WHERE S.device_id = D.device_id ORDER BY hostname") as $device)
-  {
-    $servicesform .= "<option value='" . $device['service_id'] . "'>" . $device['service_id'] .  "." . $device['hostname'] . " - " . $device['service_type'] .  "</option>";
-  }
+    foreach (dbFetchRows('SELECT * FROM `services` AS S, `devices` AS D WHERE S.device_id = D.device_id ORDER BY hostname') as $device) {
+        $servicesform .= "<option value='".$device['service_id']."'>".$device['service_id'].'.'.$device['hostname'].' - '.$device['service_type'].'</option>';
+    }
 
-  if ($updated) { print_message("Service Deleted!"); }
+    if ($updated) {
+        print_message('Service Deleted!');
+    }
 
-  echo("
+    echo "
 <h4>Delete Service</h4>
-<form id='addsrv' name='addsrv' method='post' action=''>
+<form id='addsrv' name='addsrv' method='post' action='' class='form-horizontal' role='form'>
   <input type=hidden name='delsrv' value='yes'>
-  <table width='300' border='0'>
-    <tr>
-      <td>
-        Device
-      </td>
-      <td>
-        <select name='service'>
+  <div class='well well-lg'>
+    <div class='form-group'>
+      <label for='service' class='col-sm-2 control-label'>Device - Service</label>
+      <div class='col-sm-5'>
+        <select name='service' id='service' class='form-control input-sm'>
           $servicesform
         </select>
-      </td>
-    </tr>
-  </table>
-<input type='submit' name='Submit' value='Delete' />
-</form>");
-
-}
-
-?>
+      </div>
+      <div class='col-sm-5'>
+      </div>
+    </div>
+    <button type='submit' name='Submit' class='btn btn-danger input-sm'>Delete</button>
+  </div>
+</form>";
+}//end if

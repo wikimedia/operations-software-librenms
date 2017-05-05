@@ -1,57 +1,107 @@
 <?php
 
-$graph_type = "processor_usage";
+$processors = dbFetchRows('SELECT * FROM `processors` WHERE device_id = ?', array($device['device_id']));
 
-$processors = dbFetchRows("SELECT * FROM `processors` WHERE device_id = ?", array($device['device_id']));
-
-if (count($processors))
-{
-  echo("<div style='background-color: #eeeeee; margin: 5px; padding: 5px;'>");
-  echo("<p style='padding: 0px 5px 5px;' class=sectionhead>");
-  echo('<a class="sectionhead" href="device/device='.$device['device_id'].'/tab=health/metric=processor/">');
-  echo("<img align='absmiddle' src='images/icons/processor.png'> Processors</a></p>");
-  echo("<table width=100% cellspacing=0 cellpadding=5>");
-
-  foreach ($processors as $proc)
-  {
-    $text_descr = rewrite_entity_descr($proc['processor_descr']);
-
-    # disable short hrDeviceDescr. need to make this prettier.
-    #$text_descr = short_hrDeviceDescr($proc['processor_descr']);
-    $percent = $proc['processor_usage'];
-    $background = get_percentage_colours($percent);
-    $graph_colour = str_replace("#", "", $row_colour);
+if (count($processors)) {
+    echo '<div class="container-fluid ">
+      <div class="row">
+        <div class="col-md-12 ">
+          <div class="panel panel-default panel-condensed">
+            <div class="panel-heading">
+';
+    echo '<a href="device/device='.$device['device_id'].'/tab=health/metric=processor/">';
+    echo "<img src='images/icons/processor.png'> <strong>Processors</strong></a>";
+    echo '</div>
+        <table class="table table-hover table-condensed table-striped">';
 
     $graph_array           = array();
-    $graph_array['height'] = "100";
-    $graph_array['width']  = "210";
     $graph_array['to']     = $config['time']['now'];
-    $graph_array['id']     = $proc['processor_id'];
-    $graph_array['type']   = $graph_type;
+    $graph_array['type']   = 'processor_usage';
     $graph_array['from']   = $config['time']['day'];
-    $graph_array['legend'] = "no";
+    $graph_array['legend'] = 'no';
 
-    $link_array = $graph_array;
-    $link_array['page'] = "graphs";
-    unset($link_array['height'], $link_array['width'], $link_array['legend']);
-    $link = generate_url($link_array);
+    $totalPercent=0;
 
-    $overlib_content = generate_overlib_content($graph_array, $device['hostname'] . " - " . $text_descr);
+    foreach ($processors as $proc) {
+        $text_descr = rewrite_entity_descr($proc['processor_descr']);
 
-    $graph_array['width'] = 80; $graph_array['height'] = 20; $graph_array['bg'] = 'ffffff00'; # the 00 at the end makes the area transparent.
+        $percent      = $proc['processor_usage'];
+        if ($config['cpu_details_overview'] === true)
+        {
 
-    $minigraph =  generate_graph_tag($graph_array);
+            $background   = get_percentage_colours($percent);
 
-    echo("<tr class=device-overview>
-           <td class=tablehead>".overlib_link($link, $text_descr, $overlib_content)."</td>
-           <td width=90>".overlib_link($link, $minigraph, $overlib_content)."</td>
-           <td width=200>".overlib_link($link, print_percentage_bar (200, 20, $percent, NULL, "ffffff", $background['left'], $percent . "%", "ffffff", $background['right']), $overlib_content)."
-           </a></td>
-         </tr>");
-  }
+            $graph_array['id']     = $proc['processor_id'];
 
-  echo("</table>");
-  echo("</div>");
-}
+            //Generate tooltip graphs
+            $graph_array['height'] = '100';
+            $graph_array['width']  = '210';
+            $link_array         = $graph_array;
+            $link_array['page'] = 'graphs';
+            unset($link_array['height'], $link_array['width'], $link_array['legend']);
+            $link = generate_url($link_array);
+            $overlib_content = generate_overlib_content($graph_array, $device['hostname'].' - '.$text_descr);
 
-?>
+            //Generate the minigraph
+            $graph_array['width']  = 80;
+            $graph_array['height'] = 20;
+            $graph_array['bg']     = 'ffffff00'; // the 00 at the end makes the area transparent.
+            $minigraph =  generate_lazy_graph_tag($graph_array);
+
+            echo '<tr>
+                <td>'.overlib_link($link, $text_descr, $overlib_content).'</td>
+                <td>'.overlib_link($link, $minigraph, $overlib_content).'</td>
+                <td>'.overlib_link($link, print_percentage_bar(200, 20, $percent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content).'
+                </a></td>
+              </tr>';
+        }
+        else {
+            $totalPercent = $totalPercent + $percent;
+        }
+
+    }//end foreach
+
+    if ($config['cpu_details_overview'] === false)
+    {
+
+        //Generate average cpu graph
+        $graph_array['height'] = '100';
+        $graph_array['width']  = '485';
+        $graph_array['device'] = $device['device_id'];
+        $graph_array['type']   = 'device_processor';
+        $graph = generate_lazy_graph_tag($graph_array);
+
+        //Generate link to graphs
+        $link_array         = $graph_array;
+        $link_array['page'] = 'graphs';
+        unset($link_array['height'], $link_array['width']);
+        $link = generate_url($link_array);
+
+        //Generate tooltip
+        $graph_array['width'] = '210';
+        $overlib_content      = generate_overlib_content($graph_array, $device['hostname'].' - CPU usage');
+
+        echo '<tr>
+              <td colspan="4">';
+        echo overlib_link($link, $graph, $overlib_content, null);
+        echo '  </td>
+            </tr>';
+
+        //Add a row with CPU desc, count and percent graph
+        $totalPercent=$totalPercent/count($processors);
+        $background   = get_percentage_colours($totalPercent);
+
+         echo '<tr>
+             <td>'.overlib_link($link, $text_descr, $overlib_content).'</td>
+             <td>'.overlib_link($link,'x'.count($processors),$overlib_content).'</td>
+             <td>'.overlib_link($link, print_percentage_bar(200, 20, $totalPercent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content).'</td>
+           </tr>';
+
+    }
+
+    echo '</table>
+        </div>
+        </div>
+        </div>
+        </div>';
+}//end if
