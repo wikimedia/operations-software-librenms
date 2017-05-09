@@ -24,12 +24,16 @@
  * @subpackage Polling
  */
 
-if (!empty($agent_data['app']['bind']) && $app['app_id'] > 0) {
+use LibreNMS\RRD\RrdDefinition;
+
+$name = 'bind';
+$app_id = $app['app_id'];
+if (!empty($agent_data['app'][$name]) && $app_id > 0) {
     echo ' bind ';
-    $bind         = $agent_data['app']['bind'];
-    $rrd_filename = $config['rrd_dir'].'/'.$device['hostname'].'/app-bind-'.$app['app_id'].'.rrd';
+    $bind         = $agent_data['app'][$name];
     $bind_parsed  = array();
     $prefix       = '';
+    update_application($app, $bind);
     foreach (explode("\n", $bind) as $line) {
         $pattern = '/^\+\+ ([^+]+) \+\+$/';
         preg_match($pattern, $line, $matches);
@@ -43,8 +47,7 @@ if (!empty($agent_data['app']['bind']) && $app['app_id'] > 0) {
         if (!empty($matches)) {
             if ($matches[1] == 'default') {
                 continue;
-            }
-            else {
+            } else {
                 $view = $matches[1];
             }
         }
@@ -62,43 +65,38 @@ if (!empty($agent_data['app']['bind']) && $app['app_id'] > 0) {
             $item = str_replace(' ', '_', strtolower($matches[2]));
             if (!empty($view)) {
                 $bind_parsed[$prefix][$view][$item] = $cnt;
-            }
-            else {
+            } else {
                 $bind_parsed[$prefix][$item] = $cnt;
             }
         }
     }//end foreach
 
-    if (!is_file($rrd_filename)) {
-        rrdtool_create(
-            $rrd_filename,
-            '--step 300 
-            DS:any:COUNTER:600:0:125000000000 
-            DS:a:COUNTER:600:0:125000000000 
-            DS:aaaa:COUNTER:600:0:125000000000 
-            DS:cname:COUNTER:600:0:125000000000 
-            DS:mx:COUNTER:600:0:125000000000 
-            DS:ns:COUNTER:600:0:125000000000 
-            DS:ptr:COUNTER:600:0:125000000000 
-            DS:soa:COUNTER:600:0:125000000000 
-            DS:srv:COUNTER:600:0:125000000000 
-            DS:spf:COUNTER:600:0:125000000000 '.$config['rrd_rra']
-        );
-    }
+    $rrd_name = array('app', $name, $app_id);
+    $rrd_def = RrdDefinition::make()
+        ->addDataset('any', 'COUNTER', 0, 125000000000)
+        ->addDataset('a', 'COUNTER', 0, 125000000000)
+        ->addDataset('aaaa', 'COUNTER', 0, 125000000000)
+        ->addDataset('cname', 'COUNTER', 0, 125000000000)
+        ->addDataset('mx', 'COUNTER', 0, 125000000000)
+        ->addDataset('ns', 'COUNTER', 0, 125000000000)
+        ->addDataset('ptr', 'COUNTER', 0, 125000000000)
+        ->addDataset('soa', 'COUNTER', 0, 125000000000)
+        ->addDataset('srv', 'COUNTER', 0, 125000000000)
+        ->addDataset('spf', 'COUNTER', 0, 125000000000);
 
     $fields = array(
-                    'any'   => ((int) $bind_parsed['incoming_queries']['any']),
-                    'a'     => ((int) $bind_parsed['incoming_queries']['a']),
-                    'aaaa'  => ((int) $bind_parsed['incoming_queries']['aaaa']),
-                    'cname' => ((int) $bind_parsed['incoming_queries']['cname']),
-                    'mx'    => ((int) $bind_parsed['incoming_queries']['mx']),
-                    'ns'    => ((int) $bind_parsed['incoming_queries']['ns']),
-                    'ptr'   => ((int) $bind_parsed['incoming_queries']['ptr']),
-                    'soa'   => ((int) $bind_parsed['incoming_queries']['soa']),
-                    'srv'   => ((int) $bind_parsed['incoming_queries']['srv']),
-                    'spf'   => ((int) $bind_parsed['incoming_queries']['spf']),
+        'any'   => ((int)$bind_parsed['incoming_queries']['any']),
+        'a'     => ((int)$bind_parsed['incoming_queries']['a']),
+        'aaaa'  => ((int)$bind_parsed['incoming_queries']['aaaa']),
+        'cname' => ((int)$bind_parsed['incoming_queries']['cname']),
+        'mx'    => ((int)$bind_parsed['incoming_queries']['mx']),
+        'ns'    => ((int)$bind_parsed['incoming_queries']['ns']),
+        'ptr'   => ((int)$bind_parsed['incoming_queries']['ptr']),
+        'soa'   => ((int)$bind_parsed['incoming_queries']['soa']),
+        'srv'   => ((int)$bind_parsed['incoming_queries']['srv']),
+        'spf'   => ((int)$bind_parsed['incoming_queries']['spf']),
     );
 
-    rrdtool_update($rrd_filename, $fields);
-
+    $tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
+    data_update($device, 'app', $tags, $fields);
 }//end if

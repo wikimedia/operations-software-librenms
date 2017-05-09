@@ -12,18 +12,11 @@
  * the source code distribution for details.
  */
 
-require_once '../includes/defaults.inc.php';
-require_once '../config.php';
-require_once '../includes/definitions.inc.php';
-require_once '../includes/common.php';
-require_once '../includes/dbFacile.php';
-require_once '../includes/rewrites.php';
-require_once 'includes/functions.inc.php';
-require_once '../includes/rrdtool.inc.php';
-require 'includes/Slim/Slim.php';
-\Slim\Slim::registerAutoloader();
+$init_modules = array('web', 'alerts');
+require realpath(__DIR__ . '/..') . '/includes/init.php';
+
 $app = new \Slim\Slim();
-require_once 'includes/api_functions.inc.php';
+require $config['install_dir'] . '/html/includes/api_functions.inc.php';
 $app->setName('api');
 
 $app->group(
@@ -42,12 +35,23 @@ $app->group(
                         // api/v0/devices/$hostname
                         $app->get('/:hostname', 'authToken', 'get_device')->name('get_device');
                         // api/v0/devices/$hostname
+                        $app->patch('/:hostname', 'authToken', 'update_device')->name('update_device_field');
                         $app->get('/:hostname/vlans', 'authToken', 'get_vlans')->name('get_vlans');
                         // api/v0/devices/$hostname/vlans
                         $app->get('/:hostname/graphs', 'authToken', 'get_graphs')->name('get_graphs');
                         // api/v0/devices/$hostname/graphs
+                        $app->get('/:hostname/health(/:type)(/:sensor_id)', 'authToken', 'list_available_health_graphs')->name('list_available_health_graphs');
+                        // api/v0/devices/$hostname/health
                         $app->get('/:hostname/ports', 'authToken', 'get_port_graphs')->name('get_port_graphs');
+                        $app->get('/:hostname/ip', 'authToken', 'get_ip_addresses')->name('get_device_ip_addresses');
+                        $app->get('/:hostname/port_stack', 'authToken', 'get_port_stack')->name('get_port_stack');
                         // api/v0/devices/$hostname/ports
+                        $app->get('/:hostname/components', 'authToken', 'get_components')->name('get_components');
+                        $app->post('/:hostname/components/:type', 'authToken', 'add_components')->name('add_components');
+                        $app->put('/:hostname/components', 'authToken', 'edit_components')->name('edit_components');
+                        $app->delete('/:hostname/components/:component', 'authToken', 'delete_components')->name('delete_components');
+                        $app->get('/:hostname/groups', 'authToken', 'get_device_groups')->name('get_device_groups');
+                        $app->get('/:hostname/graphs/health/:type(/:sensor_id)', 'authToken', 'get_graph_generic_by_hostname')->name('get_health_graph');
                         $app->get('/:hostname/:type', 'authToken', 'get_graph_generic_by_hostname')->name('get_graph_generic_by_hostname');
                         // api/v0/devices/$hostname/$type
                         $app->get('/:hostname/ports/:ifname', 'authToken', 'get_port_stats_by_port_hostname')->name('get_port_stats_by_port_hostname');
@@ -61,10 +65,25 @@ $app->group(
                 $app->post('/devices', 'authToken', 'add_device')->name('add_device');
                 // api/v0/devices (json data needs to be passed)
                 $app->group(
+                    '/devicegroups',
+                    function () use ($app) {
+                        $app->get('/:name', 'authToken', 'get_devices_by_group')->name('get_devices_by_group');
+                    }
+                );
+                $app->get('/devicegroups', 'authToken', 'get_device_groups')->name('get_devicegroups');
+                $app->group(
+                    '/ports',
+                    function () use ($app) {
+                        $app->get('/:portid', 'authToken', 'get_port_info')->name('get_port_info');
+                        $app->get('/:portid/ip', 'authToken', 'get_ip_addresses')->name('get_port_ip_info');
+                    }
+                );
+                $app->get('/ports', 'authToken', 'get_all_ports')->name('get_all_ports');
+                $app->group(
                     '/portgroups',
                     function () use ($app) {
+                        $app->get('/multiport/bits/:id', 'authToken', 'get_graph_by_portgroup')->name('get_graph_by_portgroup_multiport_bits');
                         $app->get('/:group', 'authToken', 'get_graph_by_portgroup')->name('get_graph_by_portgroup');
-                        // api/v0/portgroups/$group
                     }
                 );
                 $app->group(
@@ -114,6 +133,41 @@ $app->group(
                     }
                 );
                 // End Inventory
+                // Routing section
+                $app->group(
+                    '/routing',
+                    function () use ($app) {
+                        $app->group(
+                            '/ipsec',
+                            function () use ($app) {
+                                $app->get('/data/:hostname', 'authToken', 'list_ipsec')->name('list_ipsec');
+                            }
+                        );
+                    }
+                );
+            // End Routing
+                // Resources section
+                $app->group(
+                    '/resources',
+                    function () use ($app) {
+                        $app->group(
+                            '/ip',
+                            function () use ($app) {
+                                $app->get('/arp/:ip', 'authToken', 'list_arp')->name('list_arp')->conditions(array('ip' => '[^?]+'));
+                            }
+                        );
+                    }
+                );
+                // End Resources
+                // Service section
+                $app->group(
+                    '/services',
+                    function () use ($app) {
+                        $app->get('/:hostname', 'authToken', 'list_services')->name('get_service_for_host');
+                    }
+                );
+                $app->get('/services', 'authToken', 'list_services')->name('list_services');
+                // End Service
             }
         );
         $app->get('/v0', 'authToken', 'show_endpoints');

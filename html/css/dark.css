@@ -18,6 +18,10 @@
     color: #e30613;
 }
 
+.icon-theme {
+    color: black;
+}
+
 .twitter-typeahead .tt-hint {
     border-color: #000 !important;
 }
@@ -98,3 +102,4 @@
   0% { transform: rotate(0deg); transform: rotate(0deg); }
   100% { transform: rotate(360deg); transform: rotate(360deg); }
 }
+

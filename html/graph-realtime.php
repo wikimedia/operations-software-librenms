@@ -1,11 +1,11 @@
 <?php
 
 /**
- * Observium
+ * LibreNMS
  *
- *   This file is included with Observium. It was originally part of m0n0wall <http://www.m0n0.ch/wall/>
+ *   This file is included with LibreNMS. It was originally part of m0n0wall <http://www.m0n0.ch/wall/>
  *
- * @package    observium
+ * @package    librenms
  * @subpackage graphing
  * @author     T. Lechat <dev@lechat.org>, Manuel Kasper <mk@neon1.net>, Jonathan Watt <jwatt@jwatt.org>
  * @copyright  2004-2006 T. Lechat <dev@lechat.org>, Manuel Kasper <mk@neon1.net>, Jonathan Watt <jwatt@jwatt.org>
@@ -13,26 +13,16 @@
  *
  */
 
-require_once '../includes/defaults.inc.php';
-require_once '../config.php';
-require_once '../includes/definitions.inc.php';
-
-require_once '../includes/common.php';
-require_once '../includes/dbFacile.php';
-require_once '../includes/rewrites.php';
-require_once 'includes/functions.inc.php';
-require_once 'includes/authenticate.inc.php';
-
-require_once '../includes/snmp.inc.php';
+$init_modules = array('web', 'auth');
+require realpath(__DIR__ . '/..') . '/includes/init.php';
 
 if (is_numeric($_GET['id']) && ($config['allow_unauth_graphs'] || port_permitted($_GET['id']))) {
-    $port   = get_port_by_id($_GET['id']);
+    $port   = cleanPort(get_port_by_id($_GET['id']));
     $device = device_by_id_cache($port['device_id']);
     $title  = generate_device_link($device);
     $title .= " :: Port  ".generate_port_link($port);
-    $auth   = TRUE;
-}
-else {
+    $auth   = true;
+} else {
     echo("Unauthenticad");
     die;
 }
@@ -41,22 +31,20 @@ header("Content-type: image/svg+xml");
 
 /********** HTTP GET Based Conf ***********/
 $ifnum=@$port['ifIndex'];  // BSD / SNMP interface name / number
-$ifname=ifLabel($port);
-$ifname=$ifname['label']; //Interface name that will be showed on top right of graph
+$ifname=$port['label']; //Interface name that will be showed on top right of graph
 $hostname=shorthost($device['hostname']);
 
-if($_GET['title']) {
-    $ifname = $_GET['title'];
+if ($_GET['title']) {
+    $ifname = display($_GET['title']);
 }
 
 /********* Other conf *******/
 $scale_type="follow";               //Autoscale default setup : "up" = only increase scale; "follow" = increase and decrease scale according to current graphed datas
 $nb_plot=240;                   //NB plot in graph
 
-if(is_numeric($_GET['interval'])) {
+if (is_numeric($_GET['interval'])) {
     $time_interval=$_GET['interval'];
-}
-else {
+} else {
     $time_interval=1;      //Refresh time Interval
 }
 
@@ -86,7 +74,8 @@ $width=300;             //SVG internal width : do not modify
 
 /********* Graph DATA **************/
 print('<?xml version="1.0" encoding="iso-8859-1"?>' . "\n");?>
-<svg width="100%" height="100%" viewBox="0 0 <?php echo("$width $height") ?>" preserveAspectRatio="none" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" onload="init(evt)">
+<svg width="100%" height="100%" viewBox="0 0 <?php echo("$width $height") ?>" preserveAspectRatio="none" xml:space="preserve" xmlns="http://www.w3.org/2000/svg"
+     onload="init(evt)">
   <g id="graph">
     <rect id="bg" x1="0" y1="0" width="100%" height="100%" fill="white"/>
     <line id="axis_x" x1="0" y1="0" x2="0" y2="100%" <?php echo ($attribs['axis']) ?>/>

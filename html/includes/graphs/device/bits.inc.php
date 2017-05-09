@@ -16,21 +16,21 @@ foreach (dbFetchRows('SELECT * FROM `ports` WHERE `device_id` = ?', array($devic
 
     if (is_array($config['device_traffic_descr'])) {
         foreach ($config['device_traffic_descr'] as $ifdescr) {
-            if (preg_match($ifdescr.'i', $port['ifDescr']) || preg_match($ifdescr.'i', $port['ifName']) || preg_match($ifdescr.'i', $port['portName'])) {
+            if (preg_match($ifdescr.'i', $port['ifDescr']) || preg_match($ifdescr.'i', $port['ifName'])) {
                 $ignore = 1;
             }
         }
     }
 
-    $rrd_filename = $config['rrd_dir'].'/'.$device['hostname'].'/port-'.safename($port['ifIndex'].'.rrd');
-    if ($ignore != 1 && is_file($rrd_filename)) {
-        $port = ifLabel($port);
+    $rrd_filename = get_port_rrdfile_path($device['hostname'], $port['port_id']);
+    if ($ignore != 1 && rrdtool_check_rrd_exists($rrd_filename)) {
+        $port = cleanPort($port);
         // Fix Labels! ARGH. This needs to be in the bloody database!
         $rrd_filenames[]           = $rrd_filename;
         $rrd_list[$i]['filename']  = $rrd_filename;
         $rrd_list[$i]['descr']     = shorten_interface_type($port['label']);
         $rrd_list[$i]['descr_in']  = $port['label'];
-        $rrd_list[$i]['descr_out'] = $port['ifAlias'];
+        $rrd_list[$i]['descr_out'] = display($port['ifAlias']);
         $rrd_list[$i]['ds_in']     = $ds_in;
         $rrd_list[$i]['ds_out']    = $ds_out;
         $i++;

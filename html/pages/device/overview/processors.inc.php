@@ -10,7 +10,7 @@ if (count($processors)) {
             <div class="panel-heading">
 ';
     echo '<a href="device/device='.$device['device_id'].'/tab=health/metric=processor/">';
-    echo "<img src='images/icons/processor.png'> <strong>Processors</strong></a>";
+    echo '<i class="fa fa-microchip fa-lg icon-theme" aria-hidden="true"></i> <strong>Processors</strong></a>';
     echo '</div>
         <table class="table table-hover table-condensed table-striped">';
 
@@ -21,15 +21,14 @@ if (count($processors)) {
     $graph_array['legend'] = 'no';
 
     $totalPercent=0;
+    $totalPercentWarn=0;
 
     foreach ($processors as $proc) {
         $text_descr = rewrite_entity_descr($proc['processor_descr']);
 
         $percent      = $proc['processor_usage'];
-        if ($config['cpu_details_overview'] === true)
-        {
-
-            $background   = get_percentage_colours($percent);
+        if ($config['cpu_details_overview'] === true) {
+            $background   = get_percentage_colours($percent, $proc['processor_perc_warn']);
 
             $graph_array['id']     = $proc['processor_id'];
 
@@ -49,24 +48,31 @@ if (count($processors)) {
             $minigraph =  generate_lazy_graph_tag($graph_array);
 
             echo '<tr>
-                <td>'.overlib_link($link, $text_descr, $overlib_content).'</td>
-                <td>'.overlib_link($link, $minigraph, $overlib_content).'</td>
-                <td>'.overlib_link($link, print_percentage_bar(200, 20, $percent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content).'
+                <td class="col-md-4">'.overlib_link($link, $text_descr, $overlib_content).'</td>
+                <td class="col-md-4">'.overlib_link($link, $minigraph, $overlib_content).'</td>
+                <td class="col-md-4">'.overlib_link($link, print_percentage_bar(200, 20, $percent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content).'
                 </a></td>
               </tr>';
-        }
-        else {
+        } else {
             $totalPercent = $totalPercent + $percent;
+            $totalPercentWarn = $totalPercentWarn + $proc['processor_perc_warn'];
         }
-
     }//end foreach
 
-    if ($config['cpu_details_overview'] === false)
-    {
+    if ($config['cpu_details_overview'] === false) {
+        if ($_SESSION['screen_width']) {
+            if ($_SESSION['screen_width'] > 970) {
+                $graph_array['width'] = round(($_SESSION['screen_width'] - 390 )/2, 0);
+                $graph_array['height'] = round($graph_array['width'] /3);
+                $graph_array['lazy_w'] = $graph_array['width'] + 80;
+            } else {
+                $graph_array['width'] = $_SESSION['screen_width'] - 190;
+                $graph_array['height'] = round($graph_array['width'] /3);
+                $graph_array['lazy_w'] = $graph_array['width'] + 80;
+            }
+        }
 
         //Generate average cpu graph
-        $graph_array['height'] = '100';
-        $graph_array['width']  = '485';
         $graph_array['device'] = $device['device_id'];
         $graph_array['type']   = 'device_processor';
         $graph = generate_lazy_graph_tag($graph_array);
@@ -78,7 +84,8 @@ if (count($processors)) {
         $link = generate_url($link_array);
 
         //Generate tooltip
-        $graph_array['width'] = '210';
+        $graph_array['width']=210;
+        $graph_array['height']=100;
         $overlib_content      = generate_overlib_content($graph_array, $device['hostname'].' - CPU usage');
 
         echo '<tr>
@@ -89,14 +96,14 @@ if (count($processors)) {
 
         //Add a row with CPU desc, count and percent graph
         $totalPercent=$totalPercent/count($processors);
-        $background   = get_percentage_colours($totalPercent);
+        $totalPercentWarn=$totalPercentWarn/count($processors);
+        $background   = get_percentage_colours($totalPercent, $totalPercentWarn);
 
          echo '<tr>
-             <td>'.overlib_link($link, $text_descr, $overlib_content).'</td>
-             <td>'.overlib_link($link,'x'.count($processors),$overlib_content).'</td>
-             <td>'.overlib_link($link, print_percentage_bar(200, 20, $totalPercent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content).'</td>
+             <td class="col-md-4">'.overlib_link($link, $text_descr, $overlib_content).'</td>
+             <td class="col-md-4">'.overlib_link($link, 'x'.count($processors), $overlib_content).'</td>
+             <td class="col-md-4">'.overlib_link($link, print_percentage_bar(200, 20, $totalPercent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content).'</td>
            </tr>';
-
     }
 
     echo '</table>

@@ -11,11 +11,14 @@
  *  features:  build-348481
  */
 
-$data     = snmp_get_multi($device, 'VMWARE-SYSTEM-MIB::vmwProdName.0 VMWARE-SYSTEM-MIB::vmwProdVersion.0 VMWARE-SYSTEM-MIB::vmwProdBuild.0', '-OQUs', '+VMWARE-ROOT-MIB:VMWARE-SYSTEM-MIB:VMWARE-VMINFO-MIB', '+'.$config['install_dir'].'/mibs/vmware:'.$config['mibdir']);
+$data     = snmp_get_multi($device, 'VMWARE-SYSTEM-MIB::vmwProdName.0 VMWARE-SYSTEM-MIB::vmwProdVersion.0 VMWARE-SYSTEM-MIB::vmwProdBuild.0', '-OQUs', '+VMWARE-ROOT-MIB:VMWARE-SYSTEM-MIB:VMWARE-VMINFO-MIB', 'vmware');
 $version  = preg_replace('/^VMware /', '', $data[0]['vmwProdName']).' '.$data[0]['vmwProdVersion'];
 $features = 'build-'.$data[0]['vmwProdBuild'];
 $hardware = snmp_get($device, 'entPhysicalDescr.1', '-OsvQU', 'ENTITY-MIB');
 $serial   = snmp_get($device, 'entPhysicalSerialNum.1', '-OsvQU', 'ENTITY-MIB');
+
+# Clean up Generic hardware descriptions
+$hardware = rewrite_generic_hardware($hardware);
 
 /*
  * CONSOLE: Start the VMware discovery process.
@@ -28,6 +31,7 @@ echo 'VMware VM: ';
  */
 
 $db_info_list = dbFetchRows('SELECT id, vmwVmVMID, vmwVmDisplayName, vmwVmGuestOS, vmwVmMemSize, vmwVmCpus, vmwVmState FROM vminfo WHERE device_id = ?', array($device['device_id']));
+$current_vminfo = snmpwalk_cache_multi_oid($device, 'vmwVmTable', array(), '+VMWARE-ROOT-MIB:VMWARE-VMINFO-MIB', 'vmware');
 
 foreach ($db_info_list as $db_info) {
     /*
@@ -43,11 +47,11 @@ foreach ($db_info_list as $db_info) {
 
     $vm_info = array();
 
-    $vm_info['vmwVmDisplayName'] = snmp_get($device, 'VMWARE-VMINFO-MIB::vmwVmDisplayName.'.$db_info['vmwVmVMID'], '-Osqnv', '+VMWARE-ROOT-MIB:VMWARE-VMINFO-MIB', '+'.$config['install_dir'].'/mibs/vmware:'.$config['mibdir']);
-    $vm_info['vmwVmGuestOS']     = snmp_get($device, 'VMWARE-VMINFO-MIB::vmwVmGuestOS.'.$db_info['vmwVmVMID'], '-Osqnv', '+VMWARE-ROOT-MIB:VMWARE-VMINFO-MIB', '+'.$config['install_dir'].'/mibs/vmware:'.$config['mibdir']);
-    $vm_info['vmwVmMemSize']     = snmp_get($device, 'VMWARE-VMINFO-MIB::vmwVmMemSize.'.$db_info['vmwVmVMID'], '-Osqnv', '+VMWARE-ROOT-MIB:VMWARE-VMINFO-MIB', '+'.$config['install_dir'].'/mibs/vmware:'.$config['mibdir']);
-    $vm_info['vmwVmState']       = snmp_get($device, 'VMWARE-VMINFO-MIB::vmwVmState.'.$db_info['vmwVmVMID'], '-Osqnv', '+VMWARE-ROOT-MIB:VMWARE-VMINFO-MIB', '+'.$config['install_dir'].'/mibs/vmware:'.$config['mibdir']);
-    $vm_info['vmwVmCpus']        = snmp_get($device, 'VMWARE-VMINFO-MIB::vmwVmCpus.'.$db_info['vmwVmVMID'], '-Osqnv', '+VMWARE-ROOT-MIB:VMWARE-VMINFO-MIB', '+'.$config['install_dir'].'/mibs/vmware:'.$config['mibdir']);
+    $vm_info['vmwVmDisplayName'] = $current_vminfo[$db_info['vmwVmVMID']]['vmwVmDisplayName'];
+    $vm_info['vmwVmGuestOS']     = $current_vminfo[$db_info['vmwVmVMID']]['vmwVmGuestOS'];
+    $vm_info['vmwVmMemSize']     = $current_vminfo[$db_info['vmwVmVMID']]['vmwVmMemSize'];
+    $vm_info['vmwVmState']       = $current_vminfo[$db_info['vmwVmVMID']]['vmwVmState'];
+    $vm_info['vmwVmCpus']        = $current_vminfo[$db_info['vmwVmVMID']]['vmwVmCpus'];
 
     /*
      * VMware does not return an INTEGER but a STRING of the vmwVmMemSize. This bug
@@ -78,7 +82,9 @@ foreach ($db_info_list as $db_info) {
         if ($vm_info[$property] != $db_info[$property]) {
             // FIXME - this should loop building a query and then run the query after the loop (bad geert!)
             dbUpdate(array($property => $vm_info[$property]), 'vminfo', '`id` = ?', array($db_info['id']));
-            log_event($db_info['vmwVmDisplayName'].' ('.preg_replace('/^vmwVm/', '', $property).') -> '.$vm_info[$property], $device);
+            if ($db_info['vmwVmDisplayName'] != null) {
+                log_event($db_info['vmwVmDisplayName'] . ' (' . preg_replace('/^vmwVm/', '', $property) . ') -> ' . $vm_info[$property], $device, null, 3);
+            }
         }
     }
 }//end foreach

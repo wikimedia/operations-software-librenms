@@ -1,25 +1,22 @@
 <?php
 
+use LibreNMS\RRD\RrdDefinition;
+
 foreach (dbFetchRows('SELECT * FROM processors WHERE device_id = ?', array($device['device_id'])) as $processor) {
     echo 'Processor '.$processor['processor_descr'].'... ';
 
-    $file = $config['install_dir'].'/includes/polling/processors/'.$processor['processor_type'].'.inc.php';
+    $processor_type = $processor['processor_type'];
+    $processor_index = $processor['processor_index'];
+
+    $file = $config['install_dir'].'/includes/polling/processors/'. $processor_type .'.inc.php';
     if (is_file($file)) {
         include $file;
-    }
-    else {
+    } else {
         $proc = snmp_get($device, $processor['processor_oid'], '-O Uqnv', '""');
     }
 
-    $procrrd = $config['rrd_dir'].'/'.$device['hostname'].'/'.safename('processor-'.$processor['processor_type'].'-'.$processor['processor_index'].'.rrd');
-
-    if (!is_file($procrrd)) {
-        rrdtool_create(
-            $procrrd,
-            '--step 300 
-            DS:usage:GAUGE:600:-273:1000 '.$config['rrd_rra']
-        );
-    }
+    $rrd_name = array('processor', $processor_type, $processor_index);
+    $rrd_def = RrdDefinition::make()->addDataset('usage', 'GAUGE', -273, 1000);
 
     $proc       = trim(str_replace('"', '', $proc));
     list($proc) = preg_split('@\ @', $proc);
@@ -35,7 +32,10 @@ foreach (dbFetchRows('SELECT * FROM processors WHERE device_id = ?', array($devi
         'usage' => $proc,
     );
 
-    rrdtool_update($procrrd, $fields);
+    $tags = compact('processor_type', 'processor_index', 'rrd_name', 'rrd_def');
+    data_update($device, 'processors', $tags, $fields);
 
     dbUpdate(array('processor_usage' => $proc), 'processors', '`processor_id` = ?', array($processor['processor_id']));
 }//end foreach
+
+unset($processor);

@@ -2,7 +2,7 @@
 
 require 'includes/graphs/common.inc.php';
 
-$rrd_filename = $config['rrd_dir'].'/'.$device['hostname'].'/'.'ucd_cpu.rrd';
+$rrd_filename = rrd_name($device['hostname'], 'ucd_cpu');
 $rrd_options .= " DEF:user=$rrd_filename:user:AVERAGE";
 $rrd_options .= " DEF:nice=$rrd_filename:nice:AVERAGE";
 $rrd_options .= " DEF:system=$rrd_filename:system:AVERAGE";
@@ -25,7 +25,7 @@ $rrd_options .= ' AREA:system_perc#ea8f00:system:STACK';
 $rrd_options .= " GPRINT:system_perc:LAST:'   %5.2lf%%'";
 $rrd_options .= " GPRINT:system_perc:AVERAGE:'   %5.2lf%%'";
 $rrd_options .= " GPRINT:system_perc:MAX:'   %5.2lf%%\\n'";
-$rrd_options .= ' AREA:idle_perc#f8f8f3:idle:STACK';
+$rrd_options .= ' AREA:idle_perc#00007776:idle:STACK';
 $rrd_options .= " GPRINT:idle_perc:LAST:'     %5.2lf%%'";
 $rrd_options .= " GPRINT:idle_perc:AVERAGE:'   %5.2lf%%'";
 $rrd_options .= " GPRINT:idle_perc:MAX:'   %5.2lf%%\\n'";

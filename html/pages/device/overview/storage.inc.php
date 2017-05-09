@@ -11,7 +11,7 @@ if (count($drives)) {
               <div class="panel panel-default panel-condensed">
                 <div class="panel-heading">';
     echo '<a href="device/device='.$device['device_id'].'/tab=health/metric=storage/">';
-    echo "<img src='images/icons/storage.png'> <strong>Storage</strong></a>";
+    echo '<i class="fa fa-database fa-lg icon-theme" aria-hidden="true"></i> <strong>Storage</strong></a>';
     echo '    </div>
             <table class="table table-hover table-condensed table-striped">';
 
@@ -44,7 +44,7 @@ if (count($drives)) {
         $total      = formatStorage($drive['storage_size']);
         $free       = formatStorage($drive['storage_free']);
         $used       = formatStorage($drive['storage_used']);
-        $background = get_percentage_colours($percent);
+        $background = get_percentage_colours($percent, $drive['storage_perc_warn']);
 
         $graph_array           = array();
         $graph_array['height'] = '100';
@@ -60,6 +60,8 @@ if (count($drives)) {
         unset($link_array['height'], $link_array['width'], $link_array['legend']);
         $link = generate_url($link_array);
 
+        $drive['storage_descr'] = shorten_text($drive['storage_descr'], 50);
+
         $overlib_content = generate_overlib_content($graph_array, $device['hostname'].' - '.$drive['storage_descr']);
 
         $graph_array['width']  = 80;
@@ -69,9 +71,9 @@ if (count($drives)) {
         $minigraph =  generate_lazy_graph_tag($graph_array);
 
         echo '<tr>
-           <td>'.overlib_link($link, $drive['storage_descr'], $overlib_content).'</td>
-           <td>'.overlib_link($link, $minigraph, $overlib_content).'</td>
-           <td>'.overlib_link($link, print_percentage_bar(200, 20, $percent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content).'
+           <td class="col-md-4">'.overlib_link($link, $drive['storage_descr'], $overlib_content).'</td>
+           <td class="col-md-4">'.overlib_link($link, $minigraph, $overlib_content).'</td>
+           <td class="col-md-4">'.overlib_link($link, print_percentage_bar(200, 20, $percent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content).'
            </a></td>
          </tr>';
     }//end foreach

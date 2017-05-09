@@ -1,6 +1,5 @@
 <?php
 
-// Dear Tobias. You write in Perl, this makes me hate you forever.
 // This is my translation of Smokeping's graphing.
 // Thanks to Bill Fenner for Perl->Human translation:>
 $scale_min   = 0;
@@ -10,22 +9,20 @@ require 'includes/graphs/common.inc.php';
 require 'smokeping_common.inc.php';
 
 $i         = 0;
-$pings     = 20;
+$pings     = $config['smokeping']['pings'];
 $iter      = 0;
 $colourset = 'mixed';
 
 if ($width > '500') {
     $descr_len = 18;
-}
-else {
+} else {
     $descr_len = (12 + round(($width - 275) / 8));
 }
 
 // FIXME str_pad really needs a "limit to length" so we can rid of all the substrs all over the code to limit the length as below...
 if ($width > '500') {
     $rrd_options .= " COMMENT:'".substr(str_pad($unit_text, ($descr_len + 5)), 0, ($descr_len + 5))." RTT      Loss    SDev   RTT\:SDev\l'";
-}
-else {
+} else {
     $rrd_options .= " COMMENT:'".substr(str_pad($unit_text, ($descr_len + 5)), 0, ($descr_len + 5))." RTT      Loss    SDev   RTT\:SDev\l'";
 }
 
@@ -40,7 +37,7 @@ foreach ($smokeping_files[$direction][$device['hostname']] as $source => $filena
     // FIXME: $descr unused? -- PDG 2015-11-14
     $descr = rrdtool_escape($source, $descr_len);
 
-    $filename = generate_smokeping_file($device,$filename);
+    $filename = generate_smokeping_file($device, $filename);
     $rrd_options .= " DEF:median$i=".$filename.':median:AVERAGE ';
     $rrd_options .= " CDEF:dm$i=median$i,UN,0,median$i,IF";
     $rrd_options .= " DEF:loss$i=".$filename.':loss:AVERAGE';

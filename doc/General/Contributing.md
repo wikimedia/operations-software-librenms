@@ -1,3 +1,4 @@
+source: General/Contributing.md
 All contributors to LibreNMS retain copyright to their own code and are not
 required to sign over their rights to any other party.
 
@@ -5,7 +6,7 @@ required to sign over their rights to any other party.
 Contributor Agreement
 ---------------------
 
-By contributing code to LibreNMS (whether by a github pull request, or by
+By contributing code to LibreNMS (whether by a GitHub pull request, or by
 any other means), you assert that:
 
 - You have the rights to include the code, either as its original author,
@@ -29,14 +30,9 @@ any other means), you assert that:
   systems.
 
 
-To agree with these assertions, please submit a Github pull request against
-[AUTHORS.md][5], adding or altering a **single line** *containing your name,
-email address, and Github user id* in the file (so that it can be matched to
-your commits), and stating in the *commit log* (not the pull request text):
-```
-	I agree to the conditions of the Contributor Agreement
-	contained in doc/General/Contributing.md.
-```
+To agree with these assertions, when you submit your first pull request you 
+will be asked after submitting to sign the CLA, you do this by following the 
+link provided in the PR and agreeing to the CLA using your GitHub account. 
 
 Local patches
 -------------
@@ -55,21 +51,24 @@ Copyright
 We recommend that if you add a new file containing original code to the code
 base that you include a copyright notice in it as per the Free Software
 Foundation's guidelines.  You might find something like the following header
-appropriate (although this is not legal advice ;-):
+appropriate (although this is not legal advice ;-). Please also ensure you add 
+the package information to the header.
 ```
-  <?php
-  /*
-   * LibreNMS module to frob blurgs from a foo bar
-   *
-   * Copyright (c) 2015 Internet Widgitz Pty Ltd <http://example.com/>
-   *
-   * This program is free software: you can redistribute it and/or modify it
-   * under the terms of the GNU General Public License as published by the
-   * Free Software Foundation, either version 3 of the License, or (at your
-   * option) any later version.  Please see LICENSE.txt at the top level of
-   * the source code distribution for details.
-   */
-  ?>
+<?php
+/*
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.  Please see LICENSE.txt at the top level of
+ * the source code distribution for details.
+ */
+
+ * @package    LibreNMS
+ * @subpackage webui
+ * @link       http://librenms.org
+ * @copyright  2017 Internet Widgitz Pty Ltd <info@widgitz.com>
+ * @author     Me <me@infowidgitz.com>
+
 ```
 The GPLv3 itself also contains recommendations about applying the GPL to
 your code.  Please see LICENSE.txt at the top of this source code
@@ -102,7 +101,7 @@ General Guidelines
   web chat](http://webchat.freenode.net/) and follow the prompts to chat
   via the web client.
 
-- Ensure you read the Code Guidelines documention and understand the code
+- Ensure you read the Code Guidelines documentation and understand the code
   style that should be adhered to [6].
 
 
@@ -115,10 +114,18 @@ be sure to note this as a comment in the code (preferably) or the commit
 message.  Accurate attribution is crucial to our success as a Free Software
 project.
 
-- To incorporate larger blocks of code from third parties (e.g. JavaScript
-  libraries):
-    - Include its name, source URL, copyright notice, and license in
-      doc/General/Credits.md
+- For any dependency
+    - Include its name, source URL, copyright notice, and license in doc/General/Credits.md
+
+- To add a php dependency, please use composer
+    - Add the dependency `composer require --update-no-dev -o slim/slim`
+    - Add the files and commit `composer commit` or `git add -f vendor/ composer.json; git commit`
+
+    - Updating php dependencies
+        - Update dependencies `composer update --no-dev -o`
+        - Add the files and commit `composer commit` or `git add -f vendor/; git commit`
+
+- To add a javascript or other dependency
     - Where possible please include libraries in the lib/ folder.
     - Add it in a separate commit into its own directory, using
       git subtree if it is available via git:
@@ -127,9 +134,7 @@ project.
       ```ssh
       git subtree add --squash --prefix=lib/jquery-bootgrid https://github.com/rstaib/jquery-bootgrid.git master
       ```
-    - Add the code to integrate it in a separate commit.  Include:
-        - code to update it in Makefile
-	- Scrutinizer exclusions to .scrutinizer.yml (not needed if added to lib/ folder).
+    - Add the code to integrate it in a separate commit.
 	- symlinks where necessary to maintain sensible paths
 
 - Don't submit code whose license conflicts with the GPLv3.  If you're not
@@ -151,7 +156,7 @@ project.
 
   Please note that the above is necessary even if you don't care about
   keeping the copyright to your code, because otherwise we could be accused
-  of misappropriating Obserivum's code.  As the code bases develop, we
+  of misappropriating Observium's code.  As the code bases develop, we
   expect them to diverge, which means this will become less of an issue
   anyway.
 
@@ -170,7 +175,7 @@ project.
 Proposed workflow for submitting pull requests
 ----------------------------------------------
 
-Please see the new [Using Git](http://docs.librenms.org/Developing/Using-Git/) document which gives you step-by-step 
+Please see the new [Using Git](http://docs.librenms.org/Developing/Using-Git/) document which gives you step-by-step
 instructions on using git to submit a pull request.
 
 [1]: http://www.gnu.org/licenses/license-list.html

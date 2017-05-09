@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 
 /*
@@ -5,43 +6,43 @@
  * (c) 2013 LibreNMS Contributors
  */
 
-require 'includes/defaults.inc.php';
-require 'config.php';
-require_once 'includes/definitions.inc.php';
-require 'includes/functions.php';
+$init_modules = array('alerts');
+require __DIR__ . '/includes/init.php';
 
-$options = getopt('f:');
+$options = getopt('f:d:o:');
+
+if (isset($options['d'])) {
+    echo "DEBUG\n";
+    $debug = true;
+}
 
 if ($options['f'] === 'update') {
-    $innodb_buffer = innodb_buffer_check();
-    if ($innodb_buffer['used'] > $innodb_buffer['size']) {
-        if (!empty($config['alert']['default_mail'])) {
-            $subject = $config['project_name'] . ' auto-update action required';
-            $message = '
-Hi,
-
-We have just tried to update your installation but it looks like the InnoDB buffer size is too low.
-
-Because of this we have stopped the auto-update running to ensure your system is ok.
-
-You currently have a configured innodb_buffer_pool_size of ' . $innodb_buffer['size'] / 1024 / 1024 . ' MiB but is currently using ' . $innodb_buffer['used'] / 1024 / 1024 . ' MiB
-
-Take a look at https://dev.mysql.com/doc/refman/5.6/en/innodb-buffer-pool.html for further details.
-
-The ' . $config['project_name'] . ' team.';
-            send_mail($config['alert']['default_mail'],$subject,$message,$html=false);
-        } 
-        echo warn_innodb_buffer($innodb_buffer);
-        exit(2);
+    if (!$config['update']) {
+        exit(0);
     }
-    else {
-        exit((int) $config['update']);
+
+    if ($config['update_channel'] == 'master') {
+        exit(1);
+    } elseif ($config['update_channel'] == 'release') {
+        exit(3);
+    }
+    exit(0);
+}
+
+if ($options['f'] === 'rrd_purge') {
+    if (is_numeric($config['rrd_purge']) && $config['rrd_purge'] > 0) {
+        $cmd = "find ".$config['rrd_dir']." -type f -mtime +".$config['rrd_purge']." -print -exec rm -f {} +";
+        $purge = `$cmd`;
+        if (!empty($purge)) {
+            echo "Purged the following RRD files due to old age (over ".$config['rrd_purge']." days old):\n";
+            echo $purge;
+        }
     }
 }
 
 if ($options['f'] === 'syslog') {
     if (is_numeric($config['syslog_purge'])) {
-        $rows = dbFetchRow('SELECT MIN(seq) FROM syslog');
+        $rows = (int)dbFetchCell('SELECT MIN(seq) FROM syslog');
         while (true) {
             $limit = dbFetchRow('SELECT seq FROM syslog WHERE seq >= ? ORDER BY seq LIMIT 1000,1', array($rows));
             if (empty($limit)) {
@@ -51,8 +52,7 @@ if ($options['f'] === 'syslog') {
             if (dbDelete('syslog', 'seq >= ? AND seq < ? AND timestamp < DATE_SUB(NOW(), INTERVAL ? DAY)', array($rows, $limit, $config['syslog_purge'])) > 0) {
                 $rows = $limit;
                 echo 'Syslog cleared for entries over '.$config['syslog_purge']." days 1000 limit\n";
-            }
-            else {
+            } else {
                 break;
             }
         }
@@ -86,17 +86,91 @@ if ($options['f'] === 'perf_times') {
 }
 
 if ($options['f'] === 'callback') {
-    include_once 'callback.php';
+    include_once 'includes/callback.php';
 }
 
 if ($options['f'] === 'device_perf') {
     if (is_numeric($config['device_perf_purge'])) {
-        if (dbDelete('device_perf', 'timestamp < UNIX_TIMESTAMP(DATE_SUB(NOW(),INTERVAL ? DAY))', array($config['device_perf_purge']))) {
+        if (dbDelete('device_perf', 'timestamp < DATE_SUB(NOW(),INTERVAL ? DAY)', array($config['device_perf_purge']))) {
             echo 'Device performance times cleared for entries over '.$config['device_perf_purge']." days\n";
         }
     }
 }
 
 if ($options['f'] === 'notifications') {
-    include_once 'notifications.php';
+    include_once 'includes/notifications.php';
+}
+
+if ($options['f'] === 'bill_data') {
+    if (is_numeric($config['billing_data_purge']) && $config['billing_data_purge'] > 0) {
+        # Deletes data older than XX months before the start of the last complete billing period
+        $months = $config['billing_data_purge'];
+        echo "Deleting billing data more than $months month before the last completed billing cycle\n";
+        $sql = "DELETE bill_data
+                FROM bill_data
+                    INNER JOIN (SELECT bill_id, 
+                        SUBDATE(
+                            SUBDATE(
+                                ADDDATE(
+                                    subdate(curdate(), (day(curdate())-1)),             # Start of this month
+                                    bill_day - 1),                                      # Billing anniversary
+                                INTERVAL IF(bill_day > DAY(curdate()), 1, 0) MONTH),    # Deal with anniversary not yet happened this month
+                            INTERVAL ? MONTH) AS threshold                              # Adjust based on config threshold
+                FROM bills) q
+                ON bill_data.bill_id = q.bill_id AND bill_data.timestamp < q.threshold;";
+        dbQuery($sql, array($months));
+    }
+}
+
+if ($options['f'] === 'alert_log') {
+    if (is_numeric($config['alert_log_purge']) && $config['alert_log_purge'] > 0) {
+        if (dbDelete('alert_log', 'time_logged < DATE_SUB(NOW(),INTERVAL ? DAY)', array($config['alert_log_purge']))) {
+            echo 'Alert log data cleared for entries over '.$config['alert_log_purge']." days\n";
+        }
+    }
+}
+
+if ($options['f'] === 'purgeusers') {
+    $purge = 0;
+    if (is_numeric($config['radius']['users_purge']) && $config['auth_mechanism'] === 'radius') {
+        $purge = $config['radius']['users_purge'];
+    }
+    if (is_numeric($config['active_directory']['users_purge']) && $config['auth_mechanism'] === 'active_directory') {
+        $purge = $config['active_directory']['users_purge'];
+    }
+    if ($purge > 0) {
+        foreach (dbFetchRows("SELECT DISTINCT(`user`) FROM `authlog` WHERE `datetime` >= DATE_SUB(NOW(), INTERVAL ? DAY)", array($purge)) as $user) {
+            $users[] = $user['user'];
+        }
+        $del_users = '"'.implode('","', $users).'"';
+        if (dbDelete('users', "username NOT IN ($del_users)", array($del_users))) {
+            echo "Removed users that haven't logged in for $purge days";
+        }
+    }
+}
+
+if ($options['f'] === 'refresh_alert_rules') {
+    echo 'Refreshing alert rules queries' . PHP_EOL;
+    $rules = dbFetchRows('SELECT `id`, `rule` FROM `alert_rules`');
+    foreach ($rules as $rule) {
+        $data['query'] = GenSQL($rule['rule']);
+        if (!empty($data['query'])) {
+            dbUpdate($data, 'alert_rules', 'id=?', array($rule['id']));
+            unset($data);
+        }
+    }
+}
+
+if ($options['f'] === 'notify') {
+    if (isset($config['alert']['default_mail'])) {
+        send_mail(
+            $config['alert']['default_mail'],
+            '[LibreNMS] Auto update has failed',
+            "We just attempted to update your install but failed. The information below should help you fix this.\r\n\r\n" . $options['o']
+        );
+    }
+}
+
+if ($options['f'] === 'peeringdb') {
+    cache_peeringdb();
 }

@@ -73,6 +73,7 @@ $menu_options['realtime'] = 'Real time';
 // FIXME CONDITIONAL
 $menu_options['arp']    = 'ARP Table';
 $menu_options['events'] = 'Eventlog';
+$menu_options['notes'] = 'Notes';
 
 if (dbFetchCell("SELECT COUNT(*) FROM `ports_adsl` WHERE `port_id` = '".$port['port_id']."'")) {
     $menu_options['adsl'] = 'ADSL';
@@ -84,6 +85,16 @@ if (dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE `pagpGroupIfIndex` = '".$por
 
 if (dbFetchCell("SELECT COUNT(*) FROM `ports_vlans` WHERE `port_id` = '".$port['port_id']."' and `device_id` = '".$device['device_id']."'")) {
     $menu_options['vlans'] = 'VLANs';
+}
+
+// Are there any CBQoS components for this device?
+$component = new LibreNMS\Component();
+$options = array();         // Re-init array in case it has been declared previously.
+$options['filter']['type'] = array('=','Cisco-CBQOS');
+$components = $component->getComponents($device['device_id'], $options);
+$components = $components[$device['device_id']];        // We only care about our device id.
+if (count($components) > 0) {
+    $menu_options['cbqos'] = 'CBQoS';
 }
 
 $sep = '';
@@ -215,8 +226,15 @@ if (dbFetchCell("SELECT COUNT(*) FROM juniAtmVp WHERE port_id = '".$port['port_i
     }
 }//end if
 
-if ($_SESSION['userlevel'] >= '10') {
-    echo "<span style='float: right;'><a href='" . generate_url(array('page'=>'bills', 'view'=>'add', 'port'=>$port['port_id'])) . "'><img src='images/16/money.png' border='0' align='absmiddle'> Create Bill</a></span>";
+if ($_SESSION['userlevel'] >= '10' && $config['enable_billing'] == 1) {
+    $bills = dbFetchRows("SELECT `bill_id` FROM `bill_ports` WHERE `port_id`=?", array($port['port_id']));
+    if (count($bills) === 1) {
+        echo "<span style='float: right;'><a href='" . generate_url(array('page' => 'bill','bill_id' => $bills[0]['bill_id'])) . "'><i class='fa fa-money fa-lg icon-theme' aria-hidden='true'></i> View Bill</a></span>";
+    } elseif (count($bills) > 1) {
+        echo "<span style='float: right;'><a href='" . generate_url(array('page' => 'bills')) . "'><i class='fa fa-money fa-lg icon-theme' aria-hidden='true'></i> View Bills</a></span>";
+    } else {
+        echo "<span style='float: right;'><a href='" . generate_url(array('page' => 'bills','view' => 'add','port' => $port['port_id'])) . "'><i class='fa fa-money fa-lg icon-theme' aria-hidden='true'></i> Create Bill</a></span>";
+    }
 }
 
 print_optionbar_end();

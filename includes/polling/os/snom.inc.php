@@ -1,5 +1,7 @@
 <?php
 
+use LibreNMS\RRD\RrdDefinition;
+
 echo "Polling SNOM device...\n";
 
 // Get SNOM specific version string from silly SNOM location. Silly SNOM!
@@ -23,18 +25,14 @@ $txbytes = (0 - $txbytes * 8);
 $rxbytes = (0 - $rxbytes * 8);
 echo "$rxbytes, $rxpkts, $txbytes, $txpkts, $calls, $registrations";
 
-$rrdfile = $config['rrd_dir'].'/'.$device['hostname'].'/data.rrd';
-if (!is_file($rrdfile)) {
-    rrdtool_create(
-        $rrdfile,
-        'DS:INOCTETS:COUNTER:600:U:100000000000 
-        DS:OUTOCTETS:COUNTER:600:U:10000000000 
-        DS:INPKTS:COUNTER:600:U:10000000000 
-        DS:OUTPKTS:COUNTER:600:U:10000000000 
-        DS:CALLS:COUNTER:600:U:10000000000 
-        DS:REGISTRATIONS:COUNTER:600:U:10000000000 '.$config['rrd_rra']
-    );
-}
+$rrd_name = 'data';
+$rrd_def = RrdDefinition::make()
+    ->addDataset('INOCTETS', 'COUNTER', null, 100000000000)
+    ->addDataset('OUTOCTETS', 'COUNTER', null, 10000000000)
+    ->addDataset('INPKTS', 'COUNTER', null, 10000000000)
+    ->addDataset('OUTPKTS', 'COUNTER', null, 10000000000)
+    ->addDataset('CALLS', 'COUNTER', null, 10000000000)
+    ->addDataset('REGISTRATIONS', 'COUNTER', null, 10000000000);
 
 $fields = array(
     'INOCTETS'      => $rxbytes,
@@ -45,4 +43,5 @@ $fields = array(
     'REGISTRATIONS' => $registrations,
 );
 
-rrdtool_update("$rrdfile", $fields);
+$tags = compact('rrd_name', 'rrd_def');
+data_update($device, 'snom-data', $tags, $fields);

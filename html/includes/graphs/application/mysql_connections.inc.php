@@ -2,9 +2,7 @@
 
 require 'includes/graphs/common.inc.php';
 
-require 'includes/graphs/common.inc.php';
-
-$rrd_filename = $config['rrd_dir'].'/'.$device['hostname'].'/app-mysql-'.$app['app_id'].'.rrd';
+$rrd_filename = rrd_name($device['hostname'], array('app', 'mysql', $app['app_id']));
 
 $array = array(
           'MaCs' => array(
@@ -34,16 +32,15 @@ $array = array(
          );
 
 $i = 0;
-if (is_file($rrd_filename)) {
-    foreach ($array as $ds => $vars) {
+if (rrdtool_check_rrd_exists($rrd_filename)) {
+    foreach ($array as $ds => $var) {
         $rrd_list[$i]['filename'] = $rrd_filename;
-        $rrd_list[$i]['descr']    = $vars['descr'];
+        $rrd_list[$i]['descr']    = $var['descr'];
         $rrd_list[$i]['ds']       = $ds;
-        // $rrd_list[$i]['colour'] = $vars['colour'];
+        // $rrd_list[$i]['colour'] = $var['colour'];
         $i++;
     }
-}
-else {
+} else {
     echo "file missing: $file";
 }
 
@@ -51,4 +48,4 @@ $colours   = 'mixed';
 $nototal   = 1;
 $unit_text = 'Connections';
 
-require 'includes/graphs/generic_multi_simplex_seperated.inc.php';
+require 'includes/graphs/generic_multi_line.inc.php';

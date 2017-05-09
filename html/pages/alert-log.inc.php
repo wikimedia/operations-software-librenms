@@ -61,6 +61,16 @@ foreach (get_all_devices() as $hostname) {
 ?>
                "</select>"+
                "</div>"+
+               "<div class=\"form-group\">"+
+               "<label>"+
+               "<strong>&nbsp;State&nbsp;</strong>"+
+               "</label>"+
+               "<select name=\"state\" id=\"state\" class=\"form-control input-sm\">"+
+               "<option value=\"-1\"></option>"+
+               "<option value=\"0\">Ok</option>"+
+               "<option value=\"1\">Alert</option>"+
+               "</select>"+
+               "</div>"+
                "<button type=\"submit\" class=\"btn btn-default input-sm\">Filter</button>"+
                "</form></span></div>"+
                "<div class=\"col-sm-4 actionBar\"><p class=\"{{css.search}}\"></p><p class=\"{{css.actions}}\"></p></div></div></div>"
@@ -69,7 +79,8 @@ foreach (get_all_devices() as $hostname) {
     {
         return {
             id: "alertlog",
-            device_id: '<?php echo htmlspecialchars($_POST['device_id']); ?>'
+            device_id: '<?php echo htmlspecialchars($_POST['device_id']); ?>',
+            state: '<?php echo htmlspecialchars($_POST['state']); ?>'
         };
     },
     url: "ajax_table.php"
@@ -81,14 +92,14 @@ foreach (get_all_devices() as $hostname) {
     max = high - low;
     search = $('.search-field').val();
 
-    $(".pdf-export").html("<a href='pdf.php?report=alert-log&device_id=<?php echo $_POST['device_id']; ?>&string="+search+"&results="+max+"&start="+low+"'><img src='images/16/pdf.png' width='16' height='16' alt='Export to pdf'> Export to pdf</a>");
+    $(".pdf-export").html("<a href='pdf.php?report=alert-log&device_id=<?php echo $_POST['device_id']; ?>&string="+search+"&results="+max+"&start="+low+"'><i class='fa fa-heartbeat fa-lg icon-theme' aria-hidden='true'></i> Export to pdf</a>");
 
     grid.find(".incident-toggle").each( function() {
       $(this).parent().addClass('incident-toggle-td');
     }).on("click", function(e) {
       var target = $(this).data("target");
       $(target).collapse('toggle');
-      $(this).toggleClass('glyphicon-plus glyphicon-minus');
+      $(this).toggleClass('fa-plus fa-minus');
     });
     grid.find(".incident").each( function() {
       $(this).parent().addClass('col-lg-4 col-md-4 col-sm-4 col-xs-4');
@@ -98,8 +109,8 @@ foreach (get_all_devices() as $hostname) {
         $(this).find(".incident-toggle").fadeOut(200);
       }).on("click", "td:not(.incident-toggle-td)", function() {
         var target = $(this).parent().find(".incident-toggle").data("target");
-        if( $(this).parent().find(".incident-toggle").hasClass('glyphicon-plus') ) {
-          $(this).parent().find(".incident-toggle").toggleClass('glyphicon-plus glyphicon-minus');
+        if( $(this).parent().find(".incident-toggle").hasClass('fa-plus') ) {
+          $(this).parent().find(".incident-toggle").toggleClass('fa-plus fa-minus');
           $(target).collapse('toggle');
         }
       });

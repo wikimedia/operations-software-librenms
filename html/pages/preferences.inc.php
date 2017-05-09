@@ -9,29 +9,29 @@ echo '<hr>';
 
 if ($_SESSION['userlevel'] == 11) {
     demo_account();
-}
-else {
+} else {
     if ($_POST['action'] == 'changepass') {
         if (authenticate($_SESSION['username'], $_POST['old_pass'])) {
             if ($_POST['new_pass'] == '' || $_POST['new_pass2'] == '') {
                 $changepass_message = 'Password must not be blank.';
-            }
-            else if ($_POST['new_pass'] == $_POST['new_pass2']) {
+            } elseif ($_POST['new_pass'] == $_POST['new_pass2']) {
                 changepassword($_SESSION['username'], $_POST['new_pass']);
                 $changepass_message = 'Password Changed.';
-            }
-            else {
+            } else {
                 $changepass_message = "Passwords don't match.";
             }
-        }
-        else {
+        } else {
             $changepass_message = 'Incorrect password';
+        }
+    }
+    if ($vars['action'] === 'changedash') {
+        if (!empty($vars['dashboard'])) {
+            set_user_pref('dashboard', (int)$vars['dashboard']);
+            $updatedashboard_message = "User default dashboard updated";
         }
     }
 
     include 'includes/update-preferences-password.inc.php';
-
-    
 
     if (passwordscanchange($_SESSION['username'])) {
         echo '<h3>Change Password</h3>';
@@ -79,36 +79,28 @@ else {
                 echo '<input type="hidden" name="twofactorremove" value="1" />';
                 echo twofactor_form(false);
                 echo '</form></div>';
-            }
-            else {
-                $twofactor = dbFetchRow('SELECT twofactor FROM users WHERE username = ?', array($_SESSION['username']));
-                if (empty($twofactor['twofactor'])) {
+            } else {
+                $twofactor = get_user_pref('twofactor');
+                if (empty($twofactor)) {
                     echo '<div class="alert alert-danger">Error: How did you even get here?!</div><script>window.location = "preferences/";</script>';
-                }
-                else {
-                    $twofactor = json_decode($twofactor['twofactor'], true);
                 }
 
                 if (verify_hotp($twofactor['key'], $_POST['twofactor'], $twofactor['counter'])) {
-                    if (!dbUpdate(array('twofactor' => ''), 'users', 'username = ?', array($_SESSION['username']))) {
+                    if (!set_user_pref('twofactor', array())) {
                         echo '<div class="alert alert-danger">Error while disabling TwoFactor.</div>';
-                    }
-                    else {
+                    } else {
                         echo '<div class="alert alert-success">TwoFactor Disabled.</div>';
                     }
-                }
-                else {
+                } else {
                     session_destroy();
                     echo '<div class="alert alert-danger">Error: Supplied TwoFactor Token is wrong, you\'ve been logged out.</div><script>window.location = "' . $config['base_url'] . '";</script>';
                 }
             }//end if
-        }
-        else {
-            $twofactor = dbFetchRow('SELECT twofactor FROM users WHERE username = ?', array($_SESSION['username']));
+        } else {
+            $twofactor = get_user_pref('twofactor');
             echo '<script src="js/jquery.qrcode.min.js"></script>';
             echo '<div class="well"><h3>Two-Factor Authentication</h3>';
-            if (!empty($twofactor['twofactor'])) {
-                $twofactor         = json_decode($twofactor['twofactor'], true);
+            if (!empty($twofactor)) {
                 $twofactor['text'] = "<div class='form-group'>
   <label for='twofactorkey' class='col-sm-2 control-label'>Secret Key</label>
   <div class='col-sm-4'>
@@ -123,8 +115,7 @@ else {
     <input type='text' name='twofactorcounter' autocomplete='off' disabled class='form-control input-sm' value='".$twofactor['counter']."' />
   </div>
 </div>";
-                }
-                else {
+                } else {
                     $twofactor['uri'] = 'otpauth://totp/'.$_SESSION['username'].'?issuer=LibreNMS&secret='.$twofactor['key'];
                 }
 
@@ -141,32 +132,27 @@ else {
   <input type="hidden" name="twofactorremove" value="1" />
   <button class="btn btn-danger" type="submit">Disable TwoFactor</button>
 </form>';
-            }
-            else {
+            } else {
                 if (isset($_POST['gentwofactorkey']) && isset($_POST['twofactortype'])) {
                     include_once $config['install_dir'].'/html/includes/authentication/twofactor.lib.php';
-                    $chk = dbFetchRow('SELECT twofactor FROM users WHERE username = ?', array($_SESSION['username']));
-                    if (empty($chk['twofactor'])) {
+                    $chk = get_user_pref('twofactor');
+                    if (empty($chk)) {
                         $twofactor = array('key' => twofactor_genkey());
                         if ($_POST['twofactortype'] == 'counter') {
                             $twofactor['counter'] = 1;
-                        }
-                        else {
+                        } else {
                             $twofactor['counter'] = false;
                         }
 
-                        if (!dbUpdate(array('twofactor' => json_encode($twofactor)), 'users', 'username = ?', array($_SESSION['username']))) {
+                        if (!set_user_pref('twofactor', $twofactor)) {
                             echo '<div class="alert alert-danger">Error inserting TwoFactor details. Please try again later and contact Administrator if error persists.</div>';
-                        }
-                        else {
+                        } else {
                             echo '<div class="alert alert-success">Added TwoFactor credentials. Please reload page.</div><script>window.location = "preferences/";</script>';
                         }
-                    }
-                    else {
+                    } else {
                         echo '<div class="alert alert-danger">TwoFactor credentials already exists.</div>';
                     }
-                }
-                else {
+                } else {
                     echo '<form method="post" class="form-horizontal" role="form">
   <input type="hidden" name="gentwofactorkey" value="1" />
   <div class="form-group">
@@ -187,6 +173,35 @@ else {
         }//end if
     }//end if
 }//end if
+
+echo "<h3>Default Dashboard</h3>
+<hr>
+<div class='well'>";
+if (!empty($updatedashboard_message)) {
+    print_message($updatedashboard_message);
+}
+echo "
+  <form method='post' action='preferences/' class='form-horizontal' role='form'>
+    <div class='form-group'>
+      <input type=hidden name='action' value='changedash'>
+      <div class='form-group'>
+        <label for='dashboard' class='col-sm-2 control-label'>Dashboard</label>
+        <div class='col-sm-4'>
+          <select class='form-control' name='dashboard'>";
+foreach (get_dashboards() as $dash) {
+    echo "
+            <option value='".$dash['dashboard_id']."'".($dash['default'] ? ' selected' : '').">".display($dash['username']).':'.display($dash['dashboard_name'])."</option>";
+}
+echo "
+          </select>
+          <br>
+          <center><button type='submit' class='btn btn-default'>Update Dashboard</button></center>
+        </div>
+        <div class='col-sm-6'></div>
+      </div>
+    </div>
+  </form>
+</div>";
 
 
 echo "<h3>Device Permissions</h3>";

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 """
  poller-service A service to wrap SNMP polling.  It will poll up to $threads devices at a time, and will not re-poll
                 devices that have been polled within the last $poll_frequency seconds. It will prioritize devices based
@@ -136,16 +136,16 @@ poller_path = config['install_dir'] + '/poller.php'
 discover_path = config['install_dir'] + '/discovery.php'
 db_username = config['db_user']
 db_password = config['db_pass']
+db_port = int(config['db_port'])
 
 if config['db_host'][:5].lower() == 'unix:':
     db_server = config['db_host']
     db_port = 0
-elif ':' in config['db_host']:
-    db_server = config['db_host'].rsplit(':')[0]
-    db_port = int(config['db_host'].rsplit(':')[1])
+elif config['db_socket']:
+    db_server = config['db_socket']
+    db_port = 0
 else:
     db_server = config['db_host']
-    db_port = 0
 
 db_dbname = config['db_name']
 

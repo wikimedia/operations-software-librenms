@@ -1,3 +1,4 @@
+source: General/Callback-Stats-and-Privacy.md
 ## Stats data and your privacy ##
 
 This document has been put together to explain what LibreNMS does when it calls back home to report some anonymous statistics.
@@ -11,6 +12,8 @@ Now onto the bit you're interested in, what is submitted and what we do with tha
 #### What is submitted ####
 - All data is anonymous.
 - Generic statistics are taken from the database, these include things like device total, type and os, port types, speeds and total, total bgp peers. Take a look at the code for full details.
+- Pairs of sysDescr and sysObjectID from devices with a small amount of sanitation to prevent things like hostnames from being submitted.
+- We record version numbers of php, mysql, net-snmp and rrdtool
 - A random UUID is generated on your own install.
 - That's it!
 - Your IP isn't logged, even via our web service accepting the data. We don't need to know who you are so don't ask.
@@ -19,6 +22,7 @@ Now onto the bit you're interested in, what is submitted and what we do with tha
 - We store it, not for long - 3 months at the moment although this could change.
 - We use it to generate pretty graphs for people to see.
 - We use it to help prioritise issues and features that need to be worked on.
+- We use sysDescr and sysObjectID to create unit tests and improve OS discovery
 
 #### Questions? ####
 - Q. How often is data submitted? A. We submit the data once a day according to running daily.sh via cron. If you disable this then opting in will not have any affect.
@@ -30,4 +34,3 @@ Hopefully this answers the questions you might have on why and what we are doing
 
 #### How do I enable stats submission? ####
 If you're happy with all of this - please consider switching the call back system on, you can do this within the About LibreNMS page within your control panel. In the Statistics section you will find a toggle switch to enable / disable the feature. If you've previously had it switched on and want to opt out and remove your data, click the 'Clear remote stats' button and on the next submission all the data you've sent us will be removed!
-

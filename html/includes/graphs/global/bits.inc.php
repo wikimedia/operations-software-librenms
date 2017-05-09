@@ -15,14 +15,14 @@ foreach (dbFetchRows('SELECT * FROM `ports` AS P, `devices` AS D WHERE D.device_
 
     if (is_array($config['device_traffic_descr'])) {
         foreach ($config['device_traffic_descr'] as $ifdescr) {
-            if (preg_match($ifdescr.'i', $port['ifDescr']) || preg_match($ifdescr.'i', $port['ifName']) || preg_match($ifdescr.'i', $port['portName'])) {
+            if (preg_match($ifdescr.'i', $port['ifDescr']) || preg_match($ifdescr.'i', $port['ifName'])) {
                 $ignore = 1;
             }
         }
     }
 
-    $rrd_filename = $config['rrd_dir'].'/'.$port['hostname'].'/port-'.safename($port['ifIndex'].'.rrd');
-    if (!$ignore && $i < 1100 && is_file($rrd_filename)) {
+    $rrd_filename = get_port_rrdfile_path($port['hostname'], $port['port_id']);
+    if (!$ignore && $i < 1100 && rrdtool_check_rrd_exists($rrd_filename)) {
         $rrd_filenames[]          = $rrd_filename;
         $rrd_list[$i]['filename'] = $rrd_filename;
         // $rrd_list[$i]['descr'] = $port['device_id'] . " " . $port['ifDescr'];

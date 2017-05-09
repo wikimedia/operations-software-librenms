@@ -18,6 +18,10 @@
     color: #e30613;
 }
 
+.icon-theme {
+    color: black;
+}
+
 .pace {
   -webkit-pointer-events: none;
   pointer-events: none;
@@ -94,3 +98,4 @@
   0% { transform: rotate(0deg); transform: rotate(0deg); }
   100% { transform: rotate(360deg); transform: rotate(360deg); }
 }
+

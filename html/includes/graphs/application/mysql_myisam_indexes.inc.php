@@ -2,7 +2,7 @@
 
 require 'includes/graphs/common.inc.php';
 
-$rrd_filename = $config['rrd_dir'].'/'.$device['hostname'].'/app-mysql-'.$app['app_id'].'.rrd';
+$rrd_filename = rrd_name($device['hostname'], array('app', 'mysql', $app['app_id']));
 
 $array = array(
           'KRRs' => 'read requests',
@@ -12,21 +12,19 @@ $array = array(
          );
 
 $i = 0;
-if (is_file($rrd_filename)) {
-    foreach ($array as $ds => $vars) {
-    $rrd_list[$i]['filename'] = $rrd_filename;
-        if (is_array($vars)) {
-            $rrd_list[$i]['descr'] = $vars['descr'];
-        }
-        else {
-            $rrd_list[$i]['descr'] = $vars;
+if (rrdtool_check_rrd_exists($rrd_filename)) {
+    foreach ($array as $ds => $var) {
+        $rrd_list[$i]['filename'] = $rrd_filename;
+        if (is_array($var)) {
+            $rrd_list[$i]['descr'] = $var['descr'];
+        } else {
+            $rrd_list[$i]['descr'] = $var;
         }
 
         $rrd_list[$i]['ds'] = $ds;
         $i++;
     }
-}
-else {
+} else {
     echo "file missing: $file";
 }
 

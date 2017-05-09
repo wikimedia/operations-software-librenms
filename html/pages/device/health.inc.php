@@ -1,9 +1,9 @@
 <?php
 
 $storage   = dbFetchCell('select count(*) from storage WHERE device_id = ?', array($device['device_id']));
-$diskio    = dbFetchCell('select count(*) from ucd_diskio WHERE device_id = ?', array($device['device_id']));
-$mempools  = dbFetchCell('select count(*) from mempools WHERE device_id = ?', array($device['device_id']));
-$processor = dbFetchCell('select count(*) from processors WHERE device_id = ?', array($device['device_id']));
+$diskio    = get_disks($device['device_id']);
+$mempools  = dbFetchCell('select count(*) from mempools WHERE device_id = ?', array($device['device_id'])) + count_mib_mempools($device);
+$processor = dbFetchCell('select count(*) from processors WHERE device_id = ?', array($device['device_id'])) + count_mib_processors($device);
 
 $charge       = dbFetchCell("select count(*) from sensors WHERE sensor_class='charge' AND device_id = ?", array($device['device_id']));
 $temperatures = dbFetchCell("select count(*) from sensors WHERE sensor_class='temperature' AND device_id = ?", array($device['device_id']));
@@ -12,10 +12,13 @@ $fans         = dbFetchCell("select count(*) from sensors WHERE sensor_class='fa
 $volts        = dbFetchCell("select count(*) from sensors WHERE sensor_class='voltage' AND device_id = ?", array($device['device_id']));
 $current      = dbFetchCell("select count(*) from sensors WHERE sensor_class='current' AND device_id = ?", array($device['device_id']));
 $freqs        = dbFetchCell("select count(*) from sensors WHERE sensor_class='frequency' AND device_id = ?", array($device['device_id']));
+$runtime      = dbFetchCell("select count(*) from sensors WHERE sensor_class='runtime' AND device_id = ?", array($device['device_id']));
 $power        = dbFetchCell("select count(*) from sensors WHERE sensor_class='power' AND device_id = ?", array($device['device_id']));
 $dBm          = dbFetchCell("select count(*) from sensors WHERE sensor_class='dBm' AND device_id = ?", array($device['device_id']));
 $states       = dbFetchCell("select count(*) from sensors WHERE sensor_class='state' AND device_id = ?", array($device['device_id']));
 $load         = dbFetchCell("select count(*) from sensors WHERE sensor_class='load' AND device_id = ?", array($device['device_id']));
+$signal       = dbFetchCell("select count(*) from sensors WHERE sensor_class='signal' AND device_id = ?", array($device['device_id']));
+$airflow      = dbFetchCell("select count(*) from sensors WHERE sensor_class='airflow' AND device_id = ?", array($device['device_id']));
 
 unset($datas);
 $datas[] = 'overview';
@@ -59,6 +62,10 @@ if ($freqs) {
     $datas[] = 'frequency';
 }
 
+if ($runtime) {
+    $datas[] = 'runtime';
+}
+
 if ($current) {
     $datas[] = 'current';
 }
@@ -79,6 +86,14 @@ if ($load) {
     $datas[] = 'load';
 }
 
+if ($signal) {
+    $datas[] = 'signal';
+}
+
+if ($airflow) {
+    $datas[] = 'airflow';
+}
+
 $type_text['overview']    = 'Overview';
 $type_text['charge']      = 'Battery Charge';
 $type_text['temperature'] = 'Temperature';
@@ -90,11 +105,14 @@ $type_text['processor']   = 'Processor';
 $type_text['voltage']     = 'Voltage';
 $type_text['fanspeed']    = 'Fanspeed';
 $type_text['frequency']   = 'Frequency';
+$type_text['runtime']     = 'Runtime remaining';
 $type_text['current']     = 'Current';
 $type_text['power']       = 'Power';
 $type_text['dbm']         = 'dBm';
 $type_text['state']       = 'State';
 $type_text['load']        = 'Load';
+$type_text['signal']      = 'Signal';
+$type_text['airflow']     = 'Airflow';
 
 $link_array = array(
     'page'   => 'device',
@@ -130,8 +148,7 @@ print_optionbar_end();
 
 if (is_file('pages/device/health/'.mres($vars['metric']).'.inc.php')) {
     include 'pages/device/health/'.mres($vars['metric']).'.inc.php';
-}
-else {
+} else {
     foreach ($datas as $type) {
         if ($type != 'overview') {
             $graph_title         = $type_text[$type];

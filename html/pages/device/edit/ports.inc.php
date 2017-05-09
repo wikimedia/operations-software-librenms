@@ -1,11 +1,12 @@
 </form>
+<h3> Port Settings </h3>
 <span id="message"><small><div class="alert alert-danger">n.b For the first time, please click any button twice.</div></small></span>
 
 <form id='ignoreport' name='ignoreport' method='post' action='' role='form' class='form-inline'>
     <input type='hidden' name='ignoreport' value='yes'>
     <input type='hidden' name='type' value='update-ports'>
     <input type='hidden' name='device' value='<?php echo $device['device_id'];?>'>
-    <div class='table-responsibe'>
+    <div class='table-responsive'>
     <table id='edit-ports' class='table table-striped'>
         <thead>
             <tr>
@@ -15,6 +16,8 @@
                 <th data-column-id='ifOperStatus'>Oper</th>
                 <th data-column-id='disabled' data-sortable='false'>Disable</th>
                 <th data-column-id='ignore' data-sortable='false'>Ignore</th>
+                <th data-column-id='ifSpeed'>ifSpeed (bits/s)</th>
+                <th data-column-id='port_tune' data-sortable='false' data-searchable='false'>RRD Tune</th>
                 <th data-column-id='ifAlias'>Description</th>
             </tr>
         </thead>
@@ -23,6 +26,7 @@
 </form>
 <script>
 
+//$("[name='override_config']").bootstrapSwitch('offColor','danger');
     $(document).on('blur', "[name='if-alias']", function (){
         var $this = $(this);
         var descr = $this.val();
@@ -37,28 +41,70 @@
             success: function (data) {
                 if (data.status == 'ok') {
                     $this.closest('.form-group').addClass('has-success');
-                    $this.next().addClass('glyphicon-ok');
+                    $this.next().addClass('fa-check');
                     setTimeout(function(){
                         $this.closest('.form-group').removeClass('has-success');
-                        $this.next().removeClass('glyphicon-ok');
+                        $this.next().removeClass('fa-check');
                     }, 2000);
                 } else if (data.status == 'na') {
 
                 } else {
                     $(this).closest('.form-group').addClass('has-error');
-                    $this.next().addClass('glyphicon-remove');
+                    $this.next().addClass('fa-times');
                     setTimeout(function(){
                         $this.closest('.form-group').removeClass('has-error');
-                        $this.next().removeClass('glyphicon-remove');
+                        $this.next().removeClass('fa-times');
                     }, 2000);
                 }
             },
             error: function () {
                 $(this).closest('.form-group').addClass('has-error');
-                $this.next().addClass('glyphicon-remove');
+                $this.next().addClass('fa-times');
                 setTimeout(function(){
                    $this.closest('.form-group').removeClass('has-error');
-                   $this.next().removeClass('glyphicon-remove');
+                   $this.next().removeClass('fa-times');
+                }, 2000);
+            }
+        });
+    });
+    $(document).on('blur keyup', "[name='if-speed']", function (e){
+        if (e.type === 'keyup' && e.keyCode !== 13) return;
+        var $this = $(this);
+        var speed = $this.val().replace(/[^0-9]/gi, '');
+        var device_id = $this.data('device_id');
+        var port_id = $this.data('port_id');
+        var ifName = $this.data('ifname');
+        $.ajax({
+            type: 'POST',
+            url: 'ajax_form.php',
+            data: {type: "update-ifspeed", speed: speed, ifName: ifName, port_id: port_id, device_id: device_id},
+            dataType: "json",
+            success: function (data) {
+                if (data.status == 'ok') {
+                    $this.closest('.form-group').addClass('has-success');
+                    $this.next().addClass('fa-check');
+                    $this.val(speed);
+                    setTimeout(function(){
+                        $this.closest('.form-group').removeClass('has-success');
+                        $this.next().removeClass('fa-check');
+                    }, 2000);
+                } else if (data.status == 'na') {
+
+                } else {
+                    $(this).closest('.form-group').addClass('has-error');
+                    $this.next().addClass('fa-times');
+                    setTimeout(function(){
+                        $this.closest('.form-group').removeClass('has-error');
+                        $this.next().removeClass('fa-times');
+                    }, 2000);
+                }
+            },
+            error: function () {
+                $(this).closest('.form-group').addClass('has-error');
+                $this.next().addClass('fa-times');
+                setTimeout(function(){
+                   $this.closest('.form-group').removeClass('has-error');
+                   $this.next().removeClass('fa-times');
                 }, 2000);
             }
         });
@@ -153,5 +199,10 @@
             };
         },
         url: "ajax_table.php"
+    }).on("loaded.rs.jquery.bootgrid", function() {
+        $("[name='override_config']").bootstrapSwitch('offColor','danger');
+        $('input[name="override_config"]').on('switchChange.bootstrapSwitch',  function(event, state) {
+            override_config(event,state,$(this));
+        });
     });
 </script>

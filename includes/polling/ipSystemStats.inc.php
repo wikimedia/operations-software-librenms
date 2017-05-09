@@ -46,32 +46,33 @@
 // IP-MIB::ipSystemStatsDiscontinuityTime.ipv6 = Timeticks: (0) 0:00:00.00
 // IP-MIB::ipSystemStatsRefreshRate.ipv4 = Gauge32: 30000 milli-seconds
 // IP-MIB::ipSystemStatsRefreshRate.ipv6 = Gauge32: 30000 milli-seconds
-echo 'Polling IP-MIB ipSystemStats ';
 
-$ipSystemStats = snmpwalk_cache_oid($device, 'ipSystemStats', null, 'IP-MIB');
+use LibreNMS\RRD\RrdDefinition;
 
-if ($ipSystemStats) {
-    foreach ($ipSystemStats as $af => $stats) {
+$data = snmpwalk_cache_oid($device, 'ipSystemStats', null, 'IP-MIB');
+
+if ($data) {
+    $oids = array(
+        'ipSystemStatsInReceives',
+        'ipSystemStatsInHdrErrors',
+        'ipSystemStatsInAddrErrors',
+        'ipSystemStatsInUnknownProtos',
+        'ipSystemStatsInForwDatagrams',
+        'ipSystemStatsReasmReqds',
+        'ipSystemStatsReasmOKs',
+        'ipSystemStatsReasmFails',
+        'ipSystemStatsInDiscards',
+        'ipSystemStatsInDelivers',
+        'ipSystemStatsOutRequests',
+        'ipSystemStatsOutNoRoutes',
+        'ipSystemStatsOutDiscards',
+        'ipSystemStatsOutFragFails',
+        'ipSystemStatsOutFragCreates',
+        'ipSystemStatsOutForwDatagrams',
+    );
+
+    foreach ($data as $af => $stats) {
         echo "$af ";
-
-        $oids = array(
-            'ipSystemStatsInReceives',
-            'ipSystemStatsInHdrErrors',
-            'ipSystemStatsInAddrErrors',
-            'ipSystemStatsInUnknownProtos',
-            'ipSystemStatsInForwDatagrams',
-            'ipSystemStatsReasmReqds',
-            'ipSystemStatsReasmOKs',
-            'ipSystemStatsReasmFails',
-            'ipSystemStatsInDiscards',
-            'ipSystemStatsInDelivers',
-            'ipSystemStatsOutRequests',
-            'ipSystemStatsOutNoRoutes',
-            'ipSystemStatsOutDiscards',
-            'ipSystemStatsOutFragFails',
-            'ipSystemStatsOutFragCreates',
-            'ipSystemStatsOutForwDatagrams',
-        );
 
         // Use HC counters instead if they're available.
         if (isset($stats['ipSystemStatsHCInReceives'])) {
@@ -94,30 +95,21 @@ if ($ipSystemStats) {
             $stats['ipSystemStatsOutForwDatagrams'] = $stats['ipSystemStatsHCOutForwDatagrams'];
         }
 
-        unset($snmpstring, $files, $snmpdata, $snmpdata_cmd, $rrd_create);
-
-        $rrdfile = $config['rrd_dir'].'/'.$device['hostname'].'/'.safename('ipSystemStats-'.$af.'.rrd');
-
-        $rrd_create = $config['rrd_rra'];
+        $rrd_name = array('ipSystemStats', $af);
+        $rrd_def = new RrdDefinition();
         $fields  = array();
 
         foreach ($oids as $oid) {
-            $oid_ds          = str_replace('ipSystemStats', '', $oid);
-            $oid_ds      = truncate($oid_ds, 19, '');
-            $rrd_create .= " DS:$oid_ds:COUNTER:600:U:100000000000";
+            $oid_ds      = str_replace('ipSystemStats', '', $oid);
+            $rrd_def->addDataset($oid_ds, 'COUNTER');
             if (strstr($stats[$oid], 'No') || strstr($stats[$oid], 'd') || strstr($stats[$oid], 's')) {
                 $stats[$oid] = '0';
             }
             $fields[$oid] = $stats[$oid];
         }
 
-        if (!file_exists($rrdfile)) {
-            rrdtool_create($rrdfile, $rrd_create);
-        }
-
-        rrdtool_update($rrdfile, $fields);
-
-        unset($fields, $rrd_create);
+        $tags = compact('af', 'rrd_name', 'rrd_def');
+        data_update($device, 'ipSystemStats', $tags, $fields);
 
         // FIXME per-AF?
         $graphs['ipsystemstats_'.$af]         = true;
@@ -125,4 +117,5 @@ if ($ipSystemStats) {
     }//end foreach
 }//end if
 
+unset($oids, $data);
 echo "\n";

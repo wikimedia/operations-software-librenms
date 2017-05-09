@@ -37,9 +37,10 @@ print_optionbar_end();
 echo '<table cellpadding=5 cellspacing=0 class=devicetable width=100%>';
 
 foreach (dbFetchRows('SELECT * FROM pseudowires AS P, ports AS I, devices AS D WHERE P.port_id = I.port_id AND I.device_id = D.device_id ORDER BY D.hostname,I.ifDescr') as $pw_a) {
+    $pw_a = cleanPort($pw_a);
     $i = 0;
     while ($i < count($linkdone)) {
-    $thislink = $pw_a['device_id'].$pw_a['port_id'];
+        $thislink = $pw_a['device_id'].$pw_a['port_id'];
         if ($linkdone[$i] == $thislink) {
             $skip = 'yes';
         }
@@ -56,6 +57,8 @@ foreach (dbFetchRows('SELECT * FROM pseudowires AS P, ports AS I, devices AS D W
         )
     );
 
+    $pw_b = cleanPort($pw_b);
+
     if (!port_permitted($pw_a['port_id'])) {
         $skip = 'yes';
     }
@@ -66,17 +69,15 @@ foreach (dbFetchRows('SELECT * FROM pseudowires AS P, ports AS I, devices AS D W
 
     if ($skip) {
         unset($skip);
-    }
-    else {
+    } else {
         if ($bg == 'ffffff') {
             $bg = 'e5e5e5';
-        }
-        else {
+        } else {
             $bg = 'ffffff';
         }
 
         echo "<tr style=\"background-color: #$bg;\"><td rowspan=2 style='font-size:18px; padding:4px;'>".$pw_a['cpwVcID'].'</td><td>'.generate_device_link($pw_a).'</td><td>'.generate_port_link($pw_a)."</td>
-                                                                                          <td rowspan=2> <img src='images/16/arrow_right.png'> </td>
+                                                                                          <td rowspan=2> <i class='fa fa-arrows-alt fa-lg icon-theme' aria-hidden='true'></i> </td>
                                                                                           <td>".generate_device_link($pw_b).'</td><td>'.generate_port_link($pw_b).'</td></tr>';
         echo "<tr style=\"background-color: #$bg;\"><td colspan=2>".$pw_a['ifAlias'].'</td><td colspan=2>'.$pw_b['ifAlias'].'</td></tr>';
 

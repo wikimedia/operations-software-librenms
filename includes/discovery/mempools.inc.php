@@ -1,7 +1,5 @@
 <?php
 
-echo 'Memory : ';
-
 // Include all discovery modules
 $include_dir = 'includes/discovery/mempools';
 require 'includes/include-dir.inc.php';
@@ -25,5 +23,9 @@ foreach (dbFetchRows($sql) as $test_mempool) {
     unset($mempool_type);
 }
 
-unset($valid_mempool);
+unset(
+    $valid_mempool,
+    $sql,
+    $test_mempool
+);
 echo "\n";

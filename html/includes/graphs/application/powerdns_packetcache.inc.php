@@ -6,7 +6,7 @@ $scale_min    = 0;
 $colours      = 'blue';
 $nototal      = (($width < 224) ? 1 : 0);
 $unit_text    = 'Packets/sec';
-$rrd_filename = $config['rrd_dir'].'/'.$device['hostname'].'/app-powerdns-'.$app['app_id'].'.rrd';
+$rrd_filename = rrd_name($device['hostname'], array('app', 'powerdns', $app['app_id']));
 $array        = array(
                  'pc_hit'  => array(
                                'descr'  => 'Hits',
@@ -24,16 +24,15 @@ $array        = array(
 
 $i = 0;
 
-if (is_file($rrd_filename)) {
-    foreach ($array as $ds => $vars) {
+if (rrdtool_check_rrd_exists($rrd_filename)) {
+    foreach ($array as $ds => $var) {
         $rrd_list[$i]['filename'] = $rrd_filename;
-        $rrd_list[$i]['descr']    = $vars['descr'];
+        $rrd_list[$i]['descr']    = $var['descr'];
         $rrd_list[$i]['ds']       = $ds;
-        $rrd_list[$i]['colour']   = $vars['colour'];
+        $rrd_list[$i]['colour']   = $var['colour'];
         $i++;
     }
-}
-else {
+} else {
     echo "file missing: $file";
 }
 

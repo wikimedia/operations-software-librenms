@@ -4,8 +4,6 @@ if ($config['enable_pseudowires'] && $device['os_group'] == 'cisco') {
     unset($cpw_count);
     unset($cpw_exists);
 
-    echo 'Cisco Pseudowires : ';
-
     // Pre-cache the existing state of pseudowires for this device from the database
     $pws_db_raw = dbFetchRows('SELECT * FROM `pseudowires` WHERE `device_id` = ?', array($device['device_id']));
     foreach ($pws_db_raw as $pw_db) {
@@ -31,8 +29,7 @@ if ($config['enable_pseudowires'] && $device['os_group'] == 'cisco') {
         if (!empty($device['pws_db'][$pw['cpwVcID']])) {
             $pseudowire_id = $device['pws_db'][$pw['cpwVcID']];
             echo '.';
-        }
-        else {
+        } else {
             $pseudowire_id = dbInsert(
                 array(
                     'device_id'      => $device['device_id'],
@@ -56,7 +53,7 @@ if ($config['enable_pseudowires'] && $device['os_group'] == 'cisco') {
     // Cycle the list of pseudowires we cached earlier and make sure we saw them again.
     foreach ($device['pws_db'] as $pw_id => $pseudowire_id) {
         if (empty($device['pws'][$pw_id])) {
-            dbDelete('vlans', '`pseudowire_id` = ?', array($pseudowire_id));
+            dbDelete('pseudowires', '`pseudowire_id` = ?', array($pseudowire_id));
         }
     }
 

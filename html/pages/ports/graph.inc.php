@@ -3,8 +3,7 @@
 foreach ($ports as $port) {
     if (is_integer($row / 2)) {
         $row_colour = $list_colour_a;
-    }
-    else {
+    } else {
         $row_colour = $list_colour_b;
     }
 
@@ -15,28 +14,25 @@ foreach ($ports as $port) {
     $port['out_rate'] = formatRates(($port['ifOutOctets_rate'] * 8));
 
     if ($port['in_errors'] > 0 || $port['out_errors'] > 0) {
-        $error_img = generate_port_link($port, "<img src='images/16/chart_curve_error.png' alt='Interface Errors' border=0>", errors);
-    }
-    else {
+        $error_img = generate_port_link($port, "<i class='fa fa-flag fa-lg' style='color:red' aria-hidden='true'></i>", errors);
+    } else {
         $error_img = '';
     }
 
     if (port_permitted($port['port_id'], $port['device_id'])) {
-        $port = ifLabel($port, $device);
+        $port = cleanPort($port, $device);
 
         $graph_type = 'port_'.$subformat;
 
         if ($_SESSION['widescreen']) {
             $width = 357;
-        }
-        else {
+        } else {
             $width = 315;
         }
 
         if ($_SESSION['widescreen']) {
             $width_div = 438;
-        }
-        else {
+        } else {
             $width_div = 393;
         }
 

@@ -15,7 +15,7 @@
  * the source code distribution for details.
  */
 
-$productmib = trim(snmp_get($device, '.1.3.6.1.2.1.1.2.0', '-Oqv'), '" ');
+$productmib = trim($poll_device['sysObjectId'], '" ');
 
 $ruckusmodels    = array(
     "$productmib.5.0",
@@ -43,10 +43,3 @@ $ruckuscountry = first_oid_match($device, $ruckuscountries);
 if (isset($ruckuscountry) && $ruckuscountry != '') {
     $version .= " ($ruckuscountry)";
 }
-
-$ruckus_mibs = array(
-    'ruckusZDSystemStats' => 'RUCKUS-ZD-SYSTEM-MIB',
-    'ruckusZDWLANTable'   => 'RUCKUS-ZD-WLAN-MIB',
-    'ruckusZDWLANAPTable' => 'RUCKUS-ZD-WLAN-MIB',
-);
-poll_mibs($ruckus_mibs, $device, $graphs);

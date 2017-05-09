@@ -18,7 +18,7 @@ $count_sql = "SELECT COUNT(DISTINCT(`port_descr_descr`)) $sql";
 
 $sql .= ' GROUP BY `port_descr_descr`';
 
-$total = dbFetchCell($count_sql,$param);
+$total = dbFetchCell($count_sql, $param);
 if (empty($total)) {
     $total = 0;
 }
@@ -38,7 +38,7 @@ if ($rowCount != -1) {
     $sql .= " LIMIT $limit_low,$limit_high";
 }
 
-$sql = "SELECT * $sql";
+$sql = "SELECT `port_descr_descr` $sql";
 
 foreach (dbFetchRows($sql, $param) as $customer) {
     $i++;
@@ -50,15 +50,14 @@ foreach (dbFetchRows($sql, $param) as $customer) {
 
         $ifname  = fixifname($device['ifDescr']);
         $ifclass = ifclass($port['ifOperStatus'], $port['ifAdminStatus']);
+        $port    = cleanPort($port);
 
         if ($device['os'] == 'ios') {
             if ($port['ifTrunk']) {
                 $vlan = '<span class=box-desc><span class=red>'.$port['ifTrunk'].'</span></span>';
-            }
-            else if ($port['ifVlan']) {
+            } elseif ($port['ifVlan']) {
                 $vlan = '<span class=box-desc><span class=blue>VLAN '.$port['ifVlan'].'</span></span>';
-            }
-            else {
+            } else {
                 $vlan = '';
             }
         }

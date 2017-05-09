@@ -6,19 +6,17 @@ $port['hostname']  = $device['hostname'];
 
 $if_id = $port['port_id'];
 
-$port = ifLabel($port);
+$port = cleanPort($port);
 
 if (!is_integer($i / 2)) {
     $row_colour = $list_colour_a;
-}
-else {
+} else {
     $row_colour = $list_colour_b;
 }
 
 if ($port['ifInErrors_delta'] > 0 || $port['ifOutErrors_delta'] > 0) {
-    $error_img = generate_port_link($port, "<img src='images/16/chart_curve_error.png' alt='Interface Errors' border=0>", 'port_errors');
-}
-else {
+    $error_img = generate_port_link($port, "<i class='fa fa-flag fa-lg' style='color:red' aria-hidden='true'></i>", 'port_errors');
+} else {
     $error_img = '';
 }
 
@@ -27,7 +25,7 @@ onclick=\"location.href='device/".$device['device_id'].'/port/'.$port['port_id']
  <td valign=top width=350>";
 echo '        <span class=list-large>
               '.generate_port_link($port, $port['ifIndex'].'. '.$port['label']).'
-           </span><br /><span class=interface-desc>'.$port['ifAlias'].'</span>';
+           </span><br /><span class=interface-desc>'.display($port['ifAlias']).'</span>';
 
 if ($port['ifAlias']) {
     echo '<br />';
@@ -40,7 +38,8 @@ if ($port_details) {
         $break = ',';
     }
 
-    foreach (dbFetchRows('SELECT * FROM `ipv6_addresses` WHERE `port_id` = ?', array($port['port_id'])) as $ip6) {        ;
+    foreach (dbFetchRows('SELECT * FROM `ipv6_addresses` WHERE `port_id` = ?', array($port['port_id'])) as $ip6) {
+        ;
         echo "$break <a class=interface-desc href=\"javascript:popUp('netcmd.php?cmd=whois&amp;query=".$ip6['ipv6_address']."')\">".Net_IPv6::compress($ip6['ipv6_address']).'/'.$ip6['ipv6_prefixlen'].'</a>';
         $break = ',';
     }
@@ -53,7 +52,7 @@ $height = '40';
 $from   = $config['time']['day'];
 
 echo '</td><td width=135>';
-echo (formatRates(($port['ifInOctets_rate'] * 8))." <img class='optionicon' src='images/icons/arrow_updown.png' /> ".formatRates(($port['ifOutOctets_rate'] * 8)));
+echo (formatRates(($port['ifInOctets_rate'] * 8))." <i class='fa fa-arrows-v fa-lg icon-theme' aria-hidden='true'></i> ".formatRates(($port['ifOutOctets_rate'] * 8)));
 echo '<br />';
 $port['graph_type'] = 'port_bits';
 echo generate_port_link(

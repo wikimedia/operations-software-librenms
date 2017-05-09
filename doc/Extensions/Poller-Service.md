@@ -1,3 +1,4 @@
+source: Extensions/Poller-Service.md
 # Poller Service
 
 # WARNING: THIS IS HIGHLY EXPERIMENTAL AND MAY NOT WORK
@@ -23,15 +24,18 @@ $config['poller_service_single_connection']              = false;
 ```
 
 ## Distributed Polling
-Distributed polling is possible, and uses the same configuration options as are described for traditional distributed polling, except that the memcached options are not necessary. The database must be acessable from the distributed pollers, and properly configured. Remote access to the RRD directory must also be configured as described in the Distributed Poller documentation. Memcache is not required. Concurrency is managed using mysql GET_LOCK to ensure that devices are only being polled by one device at at time. The poller service is compatible with poller groups.
+Distributed polling is possible, and uses the same configuration options as are described for traditional distributed polling, except that the memcached options are not necessary. The database must be accessible from the distributed pollers, and properly configured. Remote access to the RRD directory must also be configured as described in the Distributed Poller documentation. Memcache is not required. Concurrency is managed using mysql GET_LOCK to ensure that devices are only being polled by one device at at time. The poller service is compatible with poller groups.
 
 ## Multi-Master MySQL considerations
 Because locks are not replicated in Multi-Master MySQL configurations, if you are using such a configuration, you will need to make sure that all pollers are using the same MySQL server.
 
 ## Single Connection
-If you are running MariaDB 10.2 or newer, you can tell poller-service to use a single mysql connectino for managing locks by setting `$config['poller_service_single_connection']` to `true`. *DO NOT* configure this for any version of MariaDB less than 10.2 or any version of MySQL.
+If you are running MariaDB 10.2 or newer, you can tell poller-service to use a single mysql connection for managing locks by setting `$config['poller_service_single_connection']` to `true`. *DO NOT* configure this for any version of MariaDB less than 10.2 or any version of MySQL.
 
 ## Service Installation
-An upstart configuration `poller-service.conf` is provided. To install run `ln -s /opt/librenms/poller-service.conf /etc/init/poller-service.conf`. The service will start on boot and can be started manually by running `start poller-service`. If you recieve an error that the service does not exist, run `initctl reload-configuration`. The service is configured to run as the user `librenms` and will fail if that user does not exist.
-
-An LSB init script `poller-service.init` is also provided. To install run `ln -s /opt/librenms/poller-service.init /etc/init.d/poller-service && update-rc.d poller-service defaults`.
+### Upstart
+An upstart configuration file can be found in `scripts/librenms-poller-service.conf`. To install run `cp /opt/librenms/scripts/librenms-poller-service.conf /etc/init/librenms-poller-service.conf`. The service will start on boot and can be started manually by running `start librenms-poller-service`. If you receive an error that the service does not exist, run `initctl reload-configuration`. The service is configured to run as the user `librenms` and will fail if that user does not exist.
+### LSB
+An LSB init script can be found in `scripts/librenms-poller-service.init`. To install run `cp /opt/librenms/scripts/librenms-poller-service.init /etc/init.d/librenms-poller-service && update-rc.d librenms-poller-service defaults`.
+### systemd
+A systemd unit file can be found in `scripts/librenms-poller-service.service`. To install run `cp /opt/librenms/scripts/librenms-poller-service.service /etc/systemd/system/librenms-poller-service.service && systemctl enable --now librenms-poller-service.service`.

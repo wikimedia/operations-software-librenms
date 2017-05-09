@@ -10,8 +10,7 @@ $sql .= " LEFT JOIN `poller_groups` ON `D`.`poller_group`=`poller_groups`.`id`";
 
 if (is_admin() === false) {
     $sql .= " WHERE D.device_id = P.device_id AND P.user_id = '".$_SESSION['user_id']."' AND D.ignore = '0'";
-}
-else {
+} else {
     $sql .= ' WHERE 1';
 }
 
@@ -19,13 +18,20 @@ if (isset($searchPhrase) && !empty($searchPhrase)) {
     $sql .= " AND (hostname LIKE '%$searchPhrase%' OR last_polled LIKE '%$searchPhrase%' OR last_polled_timetaken LIKE '%$searchPhrase%')";
 }
 
+if ($_POST['type'] == "unpolled") {
+    $sql .= " AND `last_polled` <= DATE_ADD(NOW(), INTERVAL - 15 minute)";
+}
+
 if (!isset($sort) || empty($sort)) {
     $sort = 'last_polled_timetaken DESC';
 }
 
-$sql .= " AND D.status ='1' AND D.ignore='0' AND D.disabled='0' ORDER BY $sort";
+$sql .= " AND D.status ='1' AND D.ignore='0' AND D.disabled='0'";
 
 $count_sql = "SELECT COUNT(`D`.`device_id`) $sql";
+
+$sql .= " ORDER BY $sort";
+
 $total     = dbFetchCell($count_sql);
 if (empty($total)) {
     $total = 0;
@@ -42,7 +48,7 @@ if ($rowCount != -1) {
 
 $sql = "SELECT D.device_id,D.hostname AS `hostname`, D.last_polled AS `last_polled`, `group_name`, D.last_polled_timetaken AS `last_polled_timetaken` $sql";
 
-foreach (dbFetchRows($sql,array(),true) as $device) {
+foreach (dbFetchRows($sql, array(), true) as $device) {
     if (empty($device['group_name'])) {
         $device['group_name'] = 'General';
     }

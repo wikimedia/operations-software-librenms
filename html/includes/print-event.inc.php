@@ -3,14 +3,12 @@
 $hostname = gethostbyid($entry['host']);
 
 unset($icon);
+$severity_colour = eventlog_severity($entry['severity']);
 
-$icon = geteventicon($entry['message']);
-if ($icon) {
-    $icon = '<img src="images/16/'.$icon.'" />';
-}
+$icon = "<i class='fa fa-bookmark fa-lg $severity_colour' aria-hidden='true'></i>";
 
 echo '<tr>
-  <td>
+  <td>'.$icon.'&nbsp;
     '.$entry['datetime'].'
   </td>';
 
@@ -22,10 +20,9 @@ if (!isset($vars['device'])) {
 }
 
 if ($entry['type'] == 'interface') {
-    $this_if       = ifLabel(getifbyid($entry['reference']));
+    $this_if       = cleanPort(getifbyid($entry['reference']));
     $entry['link'] = '<b>'.generate_port_link($this_if, makeshortif(strtolower($this_if['label']))).'</b>';
-}
-else {
+} else {
     $entry['link'] = 'System';
 }
 

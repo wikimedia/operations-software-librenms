@@ -2,7 +2,6 @@
 
 $dest = device_by_id_cache($_GET['dest']);
 
-// Dear Tobias. You write in Perl, this makes me hate you forever.
 // This is my translation of Smokeping's graphing.
 // Thanks to Bill Fenner for Perl->Human translation:>
 $scale_min   = 0;
@@ -12,21 +11,19 @@ require 'includes/graphs/common.inc.php';
 require 'smokeping_common.inc.php';
 
 $i         = 0;
-$pings     = 20;
+$pings     = $config['smokeping']['pings'];
 $iter      = 0;
 $colourset = 'mixed';
 
 if ($width > '500') {
     $descr_len = 18;
-}
-else {
+} else {
     $descr_len = (12 + round(($width - 275) / 8));
 }
 
 if ($width > '500') {
     $rrd_options .= " COMMENT:'".substr(str_pad($unit_text, ($descr_len + 5)), 0, ($descr_len + 5))." RTT      Loss    SDev   RTT\:SDev                              \l'";
-}
-else {
+} else {
     $rrd_options .= " COMMENT:'".substr(str_pad($unit_text, ($descr_len + 5)), 0, ($descr_len + 5))." RTT      Loss    SDev   RTT\:SDev                              \l'";
 }
 
@@ -36,8 +33,7 @@ if ($device['hostname'] == $config['own_hostname']) {
         // Try with dots in hostname replaced by underscores
         $filename = $config['smokeping']['dir'].str_replace('.', '_', $dest['hostname']).'.rrd';
     }
-}
-else {
+} else {
     $filename = $config['smokeping']['dir'].$dest['hostname'].'~'.$device['hostname'].'.rrd';
     if (!file_exists($filename)) {
         // Try with dots in hostname replaced by underscores

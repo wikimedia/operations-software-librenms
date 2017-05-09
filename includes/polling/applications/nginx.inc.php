@@ -1,45 +1,40 @@
 <?php
 
-if (!empty($agent_data['app']['nginx'])) {
-    $nginx = $agent_data['app']['nginx'];
-}
-else {
+use LibreNMS\RRD\RrdDefinition;
+
+$name = 'nginx';
+$app_id = $app['app_id'];
+if (!empty($agent_data['app'][$name])) {
+    $nginx = $agent_data['app'][$name];
+} else {
     // Polls nginx statistics from script via SNMP
-    $nginx = snmp_get($device, 'nsExtendOutputFull.5.110.103.105.110.120', '-Ovq', 'NET-SNMP-EXTEND-MIB');
+    $nginx = snmp_get($device, '.1.3.6.1.4.1.8072.1.3.2.3.1.2.5.110.103.105.110.120', '-Ovq');
 }
+update_application($app, $nginx);
 
-$nginx_rrd = $config['rrd_dir'].'/'.$device['hostname'].'/app-nginx-'.$app['app_id'].'.rrd';
-
-echo " nginx statistics\n";
+echo ' nginx';
 
 list($active, $reading, $writing, $waiting, $req) = explode("\n", $nginx);
-if (!is_file($nginx_rrd)) {
-    rrdtool_create(
-        $nginx_rrd,
-        '--step 300 
-        DS:Requests:DERIVE:600:0:125000000000 
-        DS:Active:GAUGE:600:0:125000000000 
-        DS:Reading:GAUGE:600:0:125000000000 
-        DS:Writing:GAUGE:600:0:125000000000 
-        DS:Waiting:GAUGE:600:0:125000000000 '.$config['rrd_rra']
-    );
-}
+d_echo("active: $active reading: $reading writing: $writing waiting: $waiting Requests: $req");
 
-print "active: $active reading: $reading writing: $writing waiting: $waiting Requests: $req";
+$rrd_name = array('app', $name, $app_id);
+$rrd_def = RrdDefinition::make()
+    ->addDataset('Requests', 'DERIVE', 0, 125000000000)
+    ->addDataset('Active', 'GAUGE', 0, 125000000000)
+    ->addDataset('Reading', 'GAUGE', 0, 125000000000)
+    ->addDataset('Writing', 'GAUGE', 0, 125000000000)
+    ->addDataset('Waiting', 'GAUGE', 0, 125000000000);
+
 $fields = array(
-                'Requests' => $req,
-                'Active'   => $active,
-                'Reading'  => $reading,
-                'Writing'  => $writing,
-                'Waiting'  => $waiting,
+    'Requests' => $req,
+    'Active'   => $active,
+    'Reading'  => $reading,
+    'Writing'  => $writing,
+    'Waiting'  => $waiting,
 );
 
-rrdtool_update($nginx_rrd, $fields);
+$tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
+data_update($device, 'app', $tags, $fields);
 
 // Unset the variables we set here
-unset($nginx);
-unset($nginx_rrd);
-unset($active);
-unset($reading);
-unset($writing);
-unset($req);
+unset($nginx, $active, $reading, $writing, $req, $rrd_name, $rrd_def, $tags);

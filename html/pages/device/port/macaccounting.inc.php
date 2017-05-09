@@ -115,8 +115,7 @@ if ($vars['subview'] == 'top10') {
      </div>
 ";
     unset($query);
-}
-else {
+} else {
     $query = 'SELECT *, (M.cipMacHCSwitchedBytes_input_rate + M.cipMacHCSwitchedBytes_output_rate) as bps FROM `mac_accounting` AS M,
                        `ports` AS I, `devices` AS D WHERE M.port_id = ? AND I.port_id = M.port_id AND I.device_id = D.device_id ORDER BY bps DESC';
     $param = array($port['port_id']);
@@ -124,19 +123,18 @@ else {
     foreach (dbFetchRows($query, $param) as $acc) {
         if (!is_integer($i / 2)) {
             $row_colour = $list_colour_a;
-        }
-        else {
+        } else {
             $row_colour = $list_colour_b;
         }
 
         $addy = dbFetchRow('SELECT * FROM ipv4_mac where mac_address = ?', array($acc['mac']));
         // $name = gethostbyaddr($addy['ipv4_address']); FIXME - Maybe some caching for this?
         $arp_host = dbFetchRow('SELECT * FROM ipv4_addresses AS A, ports AS I, devices AS D WHERE A.ipv4_address = ? AND I.port_id = A.port_id AND D.device_id = I.device_id', array($addy['ipv4_address']));
+        $arp_host = cleanPort($arp_host);
         if ($arp_host) {
             $arp_name  = generate_device_link($arp_host);
             $arp_name .= ' '.generate_port_link($arp_host);
-        }
-        else {
+        } else {
             unset($arp_if);
         }
 
@@ -146,16 +144,14 @@ else {
 
         if (dbFetchCell('SELECT count(*) FROM bgpPeers WHERE device_id = ? AND bgpPeerIdentifier = ?', array($acc['device_id'], $addy['ipv4_address']))) {
             $peer_info = dbFetchRow('SELECT * FROM bgpPeers WHERE device_id = ? AND bgpPeerIdentifier = ?', array($acc['device_id'], $addy['ipv4_address']));
-        }
-        else {
+        } else {
             unset($peer_info);
         }
 
         if ($peer_info) {
             $asn    = 'AS'.$peer_info['bgpPeerRemoteAs'];
             $astext = $peer_info['astext'];
-        }
-        else {
+        } else {
             unset($as);
             unset($astext);
             unset($asn);
@@ -163,8 +159,7 @@ else {
 
         if ($vars['graph']) {
             $graph_type = 'macaccounting_'.$vars['graph'];
-        }
-        else {
+        } else {
             $graph_type = 'macaccounting_bits';
         }
 
@@ -183,8 +178,7 @@ else {
 
           <span style='font-size: 10px;'>".$name.'</span>
          </div>';
-        }
-        else {
+        } else {
             echo "<div style='background-color: $row_colour; padding: 0px;'>";
 
             echo ('

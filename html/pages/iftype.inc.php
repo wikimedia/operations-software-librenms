@@ -11,32 +11,12 @@
 
 if ($bg == '#ffffff') {
     $bg = '#e5e5e5';
-}
-else {
+} else {
     $bg = '#ffffff';
 }
 
-$type_where = ' (';
-foreach (explode(',', $vars['type']) as $type) {
-    if (is_array($config[$type.'_descr']) === false) {
-        $config[$type.'_descr'] = array($config[$type.'_descr']);
-    }
-
-    foreach ($config[$type.'_descr'] as $additional_type) {
-        if (!empty($additional_type)) {
-            $type_where  .= " $or `port_descr_type` = ?";
-            $or           = 'OR';
-            $type_param[] = $additional_type;
-        }
-    }
-
-    $type_where  .= " $or `port_descr_type` = ?";
-    $or           = 'OR';
-    $type_param[] = $type;
-}
-
-$type_where .= ') ';
-$ports       = dbFetchRows("SELECT * FROM `ports` as I, `devices` AS D WHERE $type_where AND I.device_id = D.device_id ORDER BY I.ifAlias", $type_param);
+$types_array = explode(',', $vars['type']);
+$ports = get_ports_from_type($types_array);
 
 foreach ($ports as $port) {
     $if_list  .= $seperator.$port['port_id'];
@@ -45,7 +25,6 @@ foreach ($ports as $port) {
 
 unset($seperator);
 
-$types_array = explode(',', $vars['type']);
 for ($i = 0; $i < count($types_array);
 $i++) {
     $types_array[$i] = ucfirst($types_array[$i]);
@@ -65,6 +44,7 @@ if ($if_list) {
     echo '</td></tr>';
 
     foreach ($ports as $port) {
+        $port = cleanPort($port);
         $done = 'yes';
         unset($class);
         $port['ifAlias'] = str_ireplace($type.': ', '', $port['ifAlias']);
@@ -72,8 +52,7 @@ if ($if_list) {
         $ifclass         = ifclass($port['ifOperStatus'], $port['ifAdminStatus']);
         if ($bg == '#ffffff') {
             $bg = '#e5e5e5';
-        }
-        else {
+        } else {
             $bg = '#ffffff';
         }
 
@@ -89,12 +68,12 @@ if ($if_list) {
             <td colspan='5'";
 
         if (dbFetchCell('SELECT count(*) FROM mac_accounting WHERE port_id = ?', array($port['port_id']))) {
-            echo "<span style='float: right;'><a href='" . generate_url(array('page'=>'device', 'device'=>$port['device_id'], 'tab'=>'port', 'port'=>$port['port_id'], 'view'=>'macaccounting')) . "'><img src='images/16/chart_curve.png' align='absmiddle'> MAC Accounting</a></span>";
+            echo "<span style='float: right;'><a href='" . generate_url(array('page'=>'device', 'device'=>$port['device_id'], 'tab'=>'port', 'port'=>$port['port_id'], 'view'=>'macaccounting')) . "'><i class='fa fa-pie-chart fa-lg icon-theme' aria-hidden='true'></i> MAC Accounting</a></span>";
         }
 
         echo '<br />';
 
-        if (file_exists($config['rrd_dir'].'/'.$port['hostname'].'/port-'.$port['ifIndex'].'.rrd')) {
+        if (file_exists(get_port_rrdfile_path($port['hostname'], $port['port_id']))) {
             $graph_type = 'port_bits';
 
             include 'includes/print-interface-graphs.inc.php';
@@ -102,8 +81,7 @@ if ($if_list) {
 
         echo '</td></tr>';
     }
-}
-else {
+} else {
     echo 'None found.</td></tr>';
 }
 

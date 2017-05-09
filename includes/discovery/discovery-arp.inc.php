@@ -1,6 +1,6 @@
 <?php
 //
-// Observium module to do device discovery by ARP table contents.
+// LibreNMS module to do device discovery by ARP table contents.
 //
 // Needs to be run after the ARP table discovery, because it uses the
 // data gathered by the ARP table discovery module.  Keeps a cache of
@@ -12,8 +12,6 @@
 // Author:  Paul Gear <librenms@libertysys.com.au>
 // License: GPLv3
 //
-
-echo 'ARP Discovery: ';
 
 $hostname = $device['hostname'];
 $deviceid = $device['device_id'];
@@ -43,7 +41,7 @@ foreach (dbFetchRows($sql, array($deviceid)) as $entry) {
     $ip    = $entry['ipv4_address'];
     $mac   = $entry['mac_address'];
     $if    = $entry['port_id'];
-    $int   = ifLabel($if);
+    $int   = cleanPort($if);
     $label = $int['label'];
 
     // Even though match_network is done inside discover_new_device, we do it here
@@ -55,17 +53,17 @@ foreach (dbFetchRows($sql, array($deviceid)) as $entry) {
 
     if (!match_network($config['nets'], $ip)) {
         echo 'i';
-        log_event("Ignored $ip", $deviceid, 'interface', $if);
+        log_event("Ignored $ip", $deviceid, 'interface', 3, $if);
         continue;
     }
 
     // Attempt discovery of each IP only once per run.
-    if (arp_discovery_is_cached($ip)) {
+    if (object_is_cached('arp_discovery', $ip)) {
         echo '.';
         continue;
     }
 
-    arp_discovery_add_cache($ip);
+    object_add_cache('arp_discovery', $ip);
 
     $name = gethostbyaddr($ip);
     echo '+';

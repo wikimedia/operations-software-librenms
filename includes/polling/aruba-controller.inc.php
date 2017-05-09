@@ -1,8 +1,10 @@
 <?php
+
+use LibreNMS\RRD\RrdDefinition;
+
 if ($device['type'] == 'wireless' && $device['os'] == 'arubaos') {
     global $config;
 
-    echo 'Aruba Controller: ';
     $polled = time();
 
     // Build SNMP Cache Array
@@ -24,6 +26,10 @@ if ($device['type'] == 'wireless' && $device['os'] == 'arubaos') {
     $switch_apname_oids = array('wlsxWlanRadioEntry.16');
 
 
+    // initialize arrays to avoid overwriting them in foreach loops below
+    $aruba_stats = array();
+    $aruba_apstats = array();
+    $aruba_apnames = array();
 
     $aruba_oids = array_merge($switch_info_oids, $switch_counter_oids);
     echo 'Caching Oids: ';
@@ -45,28 +51,33 @@ if ($device['type'] == 'wireless' && $device['os'] == 'arubaos') {
 
     echo "\n";
 
-    $rrdfile = $host_rrd.'/aruba-controller'.safename('.rrd');
-    if (!is_file($rrdfile)) {
-        rrdtool_create($rrdfile, ' --step 300 DS:NUMAPS:GAUGE:600:0:12500000000 DS:NUMCLIENTS:GAUGE:600:0:12500000000 '.$config['rrd_rra']);
-    }
+    $rrd_name = 'aruba-controller';
+    $rrd_def = RrdDefinition::make()
+        ->addDataset('NUMAPS', 'GAUGE', 0, 12500000000)
+        ->addDataset('NUMCLIENTS', 'GAUGE', 0, 12500000000);
 
     $fields = array(
         'NUMAPS'     => $aruba_stats[0]['wlsxSwitchTotalNumAccessPoints'],
         'NUMCLIENTS' => $aruba_stats[0]['wlsxSwitchTotalNumStationsAssociated'],
     );
-    $ret             = rrdtool_update($rrdfile, $fields);
+
+    $tags = compact('rrd_name', 'rrd_def');
+    data_update($device, 'aruba-controller', $tags, $fields);
 
     // also save the info about how many clients in the same place as the wireless module
-    $wificlientsrrd = $config['rrd_dir'].'/'.$device['hostname'].'/'.safename('wificlients-radio1.rrd');
-
-    if (!is_file($wificlientsrrd)) {
-        rrdtool_create($wificlientsrrd, '--step 300 DS:wificlients:GAUGE:600:-273:10000 '.$config['rrd_rra']);
-    }
+    $rrd_name = 'wificlients-radio1';
+    $rrd_def = 'S:wificlients:GAUGE:'.$config['rrd']['heartbeat'].':-273:10000';
 
     $fields = array(
         'wificlients' => $aruba_stats[0]['wlsxSwitchTotalNumStationsAssociated'],
     );
-    rrdtool_update($wificlientsrrd, $fields);
+
+    $tags = array(
+        'radio' => '1',
+        'rrd_name' => $rrd_name,
+        'rrd_def' => $rrd_def
+    );
+    data_update($device, 'wificlients', $tags, $fields);
 
     $graphs['wifi_clients'] = true;
 
@@ -103,17 +114,16 @@ if ($device['type'] == 'wireless' && $device['os'] == 'arubaos') {
 
         // if there is a numeric channel, assume the rest of the data is valid, I guess
         if (is_numeric($channel)) {
-            $rrd_file = $config['rrd_dir'].'/'.$device['hostname'].'/'.safename("arubaap-$name.$radionum.rrd");
-            if (!is_file($rrd_file)) {
-                $dslist  = 'DS:channel:GAUGE:600:0:200 ';
-                $dslist .= 'DS:txpow:GAUGE:600:0:200 ';
-                $dslist .= 'DS:radioutil:GAUGE:600:0:100 ';
-                $dslist .= 'DS:nummonclients:GAUGE:600:0:500 ';
-                $dslist .= 'DS:nummonbssid:GAUGE:600:0:200 ';
-                $dslist .= 'DS:numasoclients:GAUGE:600:0:500 ';
-                $dslist .= 'DS:interference:GAUGE:600:0:2000 ';
-                rrdtool_create($rrd_file, "--step 300 $dslist ".$config['rrd_rra']);
-            }
+            $rrd_name = array('arubaap',  $name.$radionum);
+
+            $rrd_def = RrdDefinition::make()
+                ->addDataset('channel', 'GAUGE', 0, 200)
+                ->addDataset('txpow', 'GAUGE', 0, 200)
+                ->addDataset('radioutil', 'GAUGE', 0, 100)
+                ->addDataset('nummonclients', 'GAUGE', 0, 500)
+                ->addDataset('nummonbssid', 'GAUGE', 0, 200)
+                ->addDataset('numasoclients', 'GAUGE', 0, 500)
+                ->addDataset('interference', 'GAUGE', 0, 2000);
 
             $fields = array(
                 'channel'         => $channel,
@@ -125,8 +135,14 @@ if ($device['type'] == 'wireless' && $device['os'] == 'arubaos') {
                 'interference'    => $interference,
             );
 
-            rrdtool_update($rrd_file, $fields);
+            $tags = array(
+                'name' => $name,
+                'radionum' => $radionum,
+                'rrd_name' => $rrd_name,
+                'rrd_def' => $rrd_def
+            );
 
+            data_update($device, 'aruba', $tags, $fields);
         }
 
         // generate the mac address
@@ -153,8 +169,7 @@ if ($device['type'] == 'wireless' && $device['os'] == 'arubaos') {
 
         if ($foundid == 0) {
             $ap_id = dbInsert(array('device_id' => $device['device_id'], 'name' => $name, 'radio_number' => $radionum, 'type' => $type, 'mac_addr' => $mac, 'channel' => $channel, 'txpow' => $txpow, 'radioutil' => $radioutil, 'numasoclients' => $numasoclients, 'nummonclients' => $nummonclients, 'numactbssid' => $numactbssid, 'nummonbssid' => $nummonbssid, 'interference' => $interference), 'access_points');
-        }
-        else {
+        } else {
             dbUpdate(array('mac_addr' => $mac, 'deleted' => 0, 'channel' => $channel, 'txpow' => $txpow, 'radioutil' => $radioutil, 'numasoclients' => $numasoclients, 'nummonclients' => $nummonclients, 'numactbssid' => $numactbssid, 'nummonbssid' => $nummonbssid, 'interference' => $interference), 'access_points', '`accesspoint_id` = ?', array($foundid));
         }
     }//end foreach

@@ -8,8 +8,7 @@ if (empty($graph_array['device'])) {
 // FIXME not css alternating yet
 if (!is_integer($g_i / 2)) {
     $row_colour = $list_colour_a;
-}
-else {
+} else {
     $row_colour = $list_colour_b;
 }
 echo '<div class="panel panel-default">
@@ -18,9 +17,9 @@ echo '<div class="panel panel-default">
     </div>
     <div class="panel-body">
 ';
-
+echo "<div class='row'>";
 require 'includes/print-graphrow.inc.php';
-
+echo '</div>';
 echo '</div>';
 echo '</div>';
 $g_i++;

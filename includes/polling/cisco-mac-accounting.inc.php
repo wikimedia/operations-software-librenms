@@ -1,12 +1,13 @@
 <?php
 
+use LibreNMS\RRD\RrdDefinition;
+
 // FIXME -- we're walking, so we can discover here too.
 if ($device['os_group'] == 'cisco') {
     $cip_oids = array(
         'cipMacHCSwitchedBytes',
         'cipMacHCSwitchedPkts',
     );
-    echo 'Cisco MAC - Caching OID: ';
     $cip_array = array();
 
     foreach ($cip_oids as $oid) {
@@ -60,17 +61,12 @@ if ($device['os_group'] == 'cisco') {
 
             d_echo("\n".$acc['hostname'].' '.$acc['ifDescr']."  $mac -> $b_in:$b_out:$p_in:$p_out ");
 
-            $rrdfile = $config['rrd_dir'].'/'.$device['hostname'].'/'.safename('cip-'.$acc['ifIndex'].'-'.$acc['mac'].'.rrd');
-
-            if (!is_file($rrdfile)) {
-                rrdtool_create(
-                    $rrdfile,
-                    'DS:IN:COUNTER:600:0:12500000000 
-                    DS:OUT:COUNTER:600:0:12500000000 
-                    DS:PIN:COUNTER:600:0:12500000000 
-                    DS:POUT:COUNTER:600:0:12500000000 '.$config['rrd_rra']
-                );
-            }
+            $rrd_name = array('cip', $ifIndex, $mac);
+            $rrd_dev = RrdDefinition::make()
+                ->addDataset('IN', 'COUNTER', 0, 12500000000)
+                ->addDataset('OUT', 'COUNTER', 0, 12500000000)
+                ->addDataset('PIN', 'COUNTER', 0, 12500000000)
+                ->addDataset('POUT', 'COUNTER', 0, 12500000000);
 
             // FIXME - use memcached to make sure these values don't go backwards?
             $fields = array(
@@ -79,7 +75,9 @@ if ($device['os_group'] == 'cisco') {
                 'PIN'  => $p_in,
                 'POUT' => $p_out,
             );
-            rrdtool_update($rrdfile, $fields);
+
+            $tags = compact('ifIndex', 'mac', 'rrd_name', 'rrd_def');
+            data_update($device, 'cip', $tags, $fields);
 
             if ($acc['update']) {
                 // Do Updates
@@ -96,3 +94,11 @@ if ($device['os_group'] == 'cisco') {
 
     echo "\n";
 }//end if
+
+unset(
+    $cip_oids,
+    $oid,
+    $polled,
+    $mac_entries,
+    $acc_rows
+);

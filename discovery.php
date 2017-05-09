@@ -2,57 +2,44 @@
 <?php
 
 /**
- * Observium
+ * LibreNMS
  *
- *   This file is part of Observium.
+ *   This file is part of LibreNMS.
  *
- * @package    observium
+ * @package    LibreNMS
  * @subpackage discovery
- * @author     Adam Armstrong <adama@memetic.org>
  * @copyright  (C) 2006 - 2012 Adam Armstrong
  */
 
-chdir(dirname($argv[0]));
+$init_modules = array('discovery');
+require __DIR__ . '/includes/init.php';
 
-require 'includes/defaults.inc.php';
-require 'config.php';
-require 'includes/definitions.inc.php';
-require 'includes/functions.php';
-require 'includes/discovery/functions.inc.php';
-
-$start         = utime();
-$runtime_stats = array();
+$start         = microtime(true);
 $sqlparams     = array();
-$options       = getopt('h:m:i:n:d::a::q',array('os:','type:'));
+$options       = getopt('h:m:i:n:d::v::a::q', array('os:','type:'));
 
 if (!isset($options['q'])) {
     echo $config['project_name_version']." Discovery\n";
-    echo get_last_commit()."\n";
 }
 
 if (isset($options['h'])) {
     if ($options['h'] == 'odd') {
         $options['n'] = '1';
         $options['i'] = '2';
-    }
-    else if ($options['h'] == 'even') {
+    } elseif ($options['h'] == 'even') {
         $options['n'] = '0';
         $options['i'] = '2';
-    }
-    else if ($options['h'] == 'all') {
+    } elseif ($options['h'] == 'all') {
         $where = ' ';
         $doing = 'all';
-    }
-    else if ($options['h'] == 'new') {
+    } elseif ($options['h'] == 'new') {
         $where = 'AND `last_discovered` IS NULL';
         $doing = 'new';
-    }
-    else if ($options['h']) {
+    } elseif ($options['h']) {
         if (is_numeric($options['h'])) {
             $where = "AND `device_id` = '".$options['h']."'";
             $doing = $options['h'];
-        }
-        else {
+        } else {
             $where = "AND `hostname` LIKE '".str_replace('*', '%', mres($options['h']))."'";
             $doing = $options['h'];
         }
@@ -74,15 +61,31 @@ if (isset($options['i']) && $options['i'] && isset($options['n'])) {
     $doing = $options['n'].'/'.$options['i'];
 }
 
-if (isset($options['d'])) {
+if (isset($options['d']) || isset($options['v'])) {
+    $versions = version_info(false);
+    echo <<<EOH
+===================================
+Version info:
+Commit SHA: {$versions['local_sha']}
+Commit Date: {$versions['local_date']}
+DB Schema: {$versions['db_schema']}
+PHP: {$versions['php_ver']}
+MySQL: {$versions['mysql_ver']}
+RRDTool: {$versions['rrdtool_ver']}
+SNMP: {$versions['netsnmp_ver']}
+==================================
+EOH;
+
     echo "DEBUG!\n";
+    if (isset($options['v'])) {
+        $vdebug = true;
+    }
     $debug = true;
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
     ini_set('log_errors', 1);
     ini_set('error_reporting', 1);
-}
-else {
+} else {
     $debug = false;
     // ini_set('display_errors', 0);
     ini_set('display_startup_errors', 0);
@@ -103,6 +106,7 @@ if (!$where) {
     echo "\n";
     echo "Debugging and testing options:\n";
     echo "-d                                           Enable debugging output\n";
+    echo "-v                                           Enable verbose debugging output\n";
     echo "-m                                           Specify single module to be run\n";
     echo "\n";
     echo "Invalid arguments!\n";
@@ -113,28 +117,32 @@ require 'includes/sql-schema/update.php';
 
 $discovered_devices = 0;
 
-if ($config['distributed_poller'] === true) {
+if (!empty($config['distributed_poller_group'])) {
     $where .= ' AND poller_group IN('.$config['distributed_poller_group'].')';
 }
 
-foreach (dbFetch("SELECT * FROM `devices` WHERE status = 1 AND disabled = 0 $where ORDER BY device_id DESC",$sqlparams) as $device) {
+global $device;
+foreach (dbFetch("SELECT * FROM `devices` WHERE status = 1 AND disabled = 0 $where ORDER BY device_id DESC", $sqlparams) as $device) {
     discover_device($device, $options);
 }
 
-$end      = utime();
+$end      = microtime(true);
 $run      = ($end - $start);
 $proctime = substr($run, 0, 5);
 
 if ($discovered_devices) {
-    dbInsert(array('type' => 'discover', 'doing' => $doing, 'start' => $start, 'duration' => $proctime, 'devices' => $discovered_devices), 'perf_times');
+    dbInsert(array('type' => 'discover', 'doing' => $doing, 'start' => $start, 'duration' => $proctime, 'devices' => $discovered_devices, 'poller' => $config['distributed_poller_name']), 'perf_times');
+    if ($doing === 'new') {
+        // We have added a new device by this point so we might want to do some other work
+        oxidized_reload_nodes();
+    }
 }
 
 $string = $argv[0]." $doing ".date($config['dateformat']['compact'])." - $discovered_devices devices discovered in $proctime secs";
 d_echo("$string\n");
 
 if (!isset($options['q'])) {
-    echo ('MySQL: Cell['.($db_stats['fetchcell'] + 0).'/'.round(($db_stats['fetchcell_sec'] + 0), 2).'s]'.' Row['.($db_stats['fetchrow'] + 0).'/'.round(($db_stats['fetchrow_sec'] + 0), 2).'s]'.' Rows['.($db_stats['fetchrows'] + 0).'/'.round(($db_stats['fetchrows_sec'] + 0), 2).'s]'.' Column['.($db_stats['fetchcol'] + 0).'/'.round(($db_stats['fetchcol_sec'] + 0), 2).'s]'.' Update['.($db_stats['update'] + 0).'/'.round(($db_stats['update_sec'] + 0), 2).'s]'.' Insert['.($db_stats['insert'] + 0).'/'.round(($db_stats['insert_sec'] + 0), 2).'s]'.' Delete['.($db_stats['delete'] + 0).'/'.round(($db_stats['delete_sec'] + 0), 2).'s]');
-    echo "\n";
+    printStats();
 }
 
 logfile($string);

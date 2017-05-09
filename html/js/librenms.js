@@ -1,30 +1,34 @@
+function override_config(event, state, tmp_this) {
+    event.preventDefault();
+    var $this = tmp_this;
+    var attrib = $this.data('attrib');
+    var device_id = $this.data('device_id');
+    $.ajax({
+        type: 'POST',
+        url: 'ajax_form.php',
+        data: { type: 'override-config', device_id: device_id, attrib: attrib, state: state },
+        dataType: 'json',
+        success: function(data) {
+            if (data.status == 'ok') {
+                toastr.success(data.message);
+            }
+            else {
+                toastr.error(data.message);
+            }
+        },
+        error: function() {
+            toastr.error('Could not set this override');
+        }
+    });
+}
+
 var oldH;
 var oldW;
 $(document).ready(function() {
     // Device override ajax calls
     $("[name='override_config']").bootstrapSwitch('offColor','danger');
     $('input[name="override_config"]').on('switchChange.bootstrapSwitch',  function(event, state) {
-        event.preventDefault();
-        var $this = $(this);
-        var attrib = $this.data('attrib');
-        var device_id = $this.data('device_id');
-        $.ajax({
-            type: 'POST',
-            url: 'ajax_form.php',
-            data: { type: 'override-config', device_id: device_id, attrib: attrib, state: state },
-            dataType: 'json',
-            success: function(data) {
-                if (data.status == 'ok') {
-                    toastr.success(data.message);
-                }
-                else {
-                    toastr.error(data.message);
-                }
-            },
-            error: function() {
-                toastr.error('Could not set this override');
-            }
-        });
+        override_config(event,state,$(this));
     });
 
     // Device override for text inputs
@@ -163,7 +167,7 @@ var newW;
 
 $(window).on('resize', function(){
     rtime = new Date();
-    if (timeout === false) {
+    if (timeout === false && !(typeof no_refresh === 'boolean' && no_refresh === true)) {
         timeout = true;
         setTimeout(resizeend, delta);
     }
@@ -209,13 +213,57 @@ $(document).on("click", '.collapse-neighbors', function(event)
     var list = caller.find('.neighbors-interface-list');
     var continued = caller.find('.neighbors-list-continued');
 
-    if(button.hasClass("glyphicon-plus")) {
-        button.addClass('glyphicon-minus').removeClass('glyphicon-plus');
+    if(button.hasClass("fa-plus")) {
+        button.addClass('fa-minus').removeClass('fa-plus');
     }
     else {
-        button.addClass('glyphicon-plus').removeClass('glyphicon-minus');
+        button.addClass('fa-plus').removeClass('fa-minus');
     }
    
     list.toggle();
     continued.toggle();
+});
+
+//availability-map mode change
+$(document).on("change", '#mode', function() {
+    $.post('ajax_mapview.php',
+        {
+            map_view: $(this).val()
+        },
+        function(data) {
+                location.reload();
+        },'json'
+    );
+});
+
+//availability-map device group
+$(document).on("change", '#group', function() {
+    $.post('ajax_mapview.php',
+        {
+            group_view: $(this).val()
+        },
+        function(data){
+            location.reload();
+        },'json'
+    );
+});
+
+$(document).ready(function() {
+    var lines = 'on';
+    $("#linenumbers").button().click(function() {
+        if (lines == 'on') {
+            $($('.config').find('ol').get().reverse()).each(function(){
+                $(this).replaceWith($('<ul>'+$(this).html()+'</ul>'))
+                lines = 'off';
+                $('#linenumbers').val('Show line numbers');
+            });
+        }
+        else {
+            $($('.config').find('ul').get().reverse()).each(function(){
+                $(this).replaceWith($('<ol>'+$(this).html()+'</ol>'));
+                lines = 'on';
+                $('#linenumbers').val('Hide line numbers');
+            });
+        }
+    });
 });
