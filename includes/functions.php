@@ -100,9 +100,18 @@ function getHostOS($device)
     // check yaml files
     $pattern = $config['install_dir'] . '/includes/definitions/*.yaml';
     foreach (glob($pattern) as $file) {
-        $tmp = Symfony\Component\Yaml\Yaml::parse(
-            file_get_contents($file)
-        );
+        $os = basename($file, '.yaml');
+        if (isset($config['os'][$os]['os'])) {
+            $tmp = $config['os'][$os];
+        } else {
+            $tmp = Symfony\Component\Yaml\Yaml::parse(
+                file_get_contents($file)
+            );
+            // pull in user overrides
+            if (isset($config['os'][$os])) {
+                $tmp = array_replace_recursive($tmp, $config['os'][$os]);
+            }
+        }
         if (isset($tmp['discovery']) && is_array($tmp['discovery'])) {
             foreach ($tmp['discovery'] as $item) {
                 // check each item individually, if all the conditions in that item are true, we have a match
@@ -435,7 +444,7 @@ function addHost($host, $snmp_version = '', $port = '161', $transport = 'udp', $
         $snmpvers = array($snmp_version);
     }
 
-    $host_unreachable_exception = new HostUnreachableException("Could not connect, please check the snmp details and snmp reachability");
+    $host_unreachable_exception = new HostUnreachableException("Could not connect to $host, please check the snmp details and snmp reachability");
     // try different snmp variables to add the device
     foreach ($snmpvers as $snmpver) {
         if ($snmpver === "v3") {
@@ -1004,8 +1013,6 @@ function is_port_valid($port, $device)
     if (empty($port['ifDescr']) && empty($port['ifAlias']) && empty($port['ifName'])) {
         // If these are all empty, we are just going to show blank names in the ui
         $valid = 0;
-    } elseif (strstr($port['ifDescr'], "irtual") && strpos($port['ifDescr'], "Virtual Services Platform") === false) {
-        $valid = 0;
     } else {
         $valid = 1;
         $if = strtolower($port['ifDescr']);
@@ -1015,10 +1022,16 @@ function is_port_valid($port, $device)
         if (is_array($config['os'][$device['os']]['bad_if'])) {
             $fringe = array_merge($config['bad_if'], $config['os'][$device['os']]['bad_if']);
         }
+        $config['good_if'] = $config['good_if'] ?: array();
+        if (is_array($config['os'][$device['os']]['good_if'])) {
+            $good_if = array_merge($config['good_if'], $config['os'][$device['os']]['good_if']);
+        }
         foreach ($fringe as $bi) {
             if (stristr($if, $bi)) {
-                $valid = 0;
-                d_echo("ignored : $bi : $if");
+                if (!str_contains($good_if, $if)) {
+                    $valid = 0;
+                    d_echo("ignored : $bi : $if");
+                }
             }
         }
         if (is_array($config['bad_if_regexp'])) {
@@ -1029,7 +1042,7 @@ function is_port_valid($port, $device)
             foreach ($fringe as $bi) {
                 if (preg_match($bi ."i", $if)) {
                     $valid = 0;
-                    d_echo("ignored : $bi : ".$if);
+                    d_echo("ignored : $bi : " . $if);
                 }
             }
         }
@@ -1344,22 +1357,33 @@ function first_oid_match($device, $list)
     }
 }
 
+
+/**
+ * Convert a hex ip to a human readable string
+ *
+ * @param string $hex
+ * @return string
+ */
 function hex_to_ip($hex)
 {
-    $return = "";
-    if (filter_var($hex, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false && filter_var($hex, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false) {
-        $hex_exp = explode(' ', $hex);
-        foreach ($hex_exp as $item) {
-            if (!empty($item) && $item != "\"") {
-                $return .= hexdec($item).'.';
-            }
-        }
-        $return = substr($return, 0, -1);
-    } else {
-        $return = $hex;
+    $hex = str_replace(array(' ', '"'), '', $hex);
+
+    if (filter_var($hex, FILTER_VALIDATE_IP)) {
+        return $hex;
     }
-    return $return;
+
+    if (strlen($hex) == 8) {
+        return long2ip(hexdec($hex));
+    }
+
+    if (strlen($hex) == 32) {
+        $ipv6 = implode(':', str_split($hex, 4));
+        return preg_replace('/:0*([0-9a-fA-F])/', ':$1', $ipv6);
+    }
+
+    return ''; // invalid input
 }
+
 function fix_integer_value($value)
 {
     if ($value < 0) {
@@ -2325,4 +2349,70 @@ function db_schema_is_current()
     $latest = key($schemas);
 
     return $current >= $latest;
+}
+
+/**
+ * Get the lock status for a given name
+ * @param $name
+ * @return bool
+ */
+function get_lock($name)
+{
+    global $config;
+    $lock_file = $config['install_dir']."/.$name.lock";
+    if (file_exists($lock_file)) {
+        $pids = explode("\n", trim(`ps -e | grep php | awk '{print $1}'`));
+        $lpid = trim(file_get_contents($lock_file));
+        if (in_array($lpid, $pids)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Set the lock status for a given name
+ * @param $name
+ */
+function set_lock($name)
+{
+    global $config;
+    $lock_file = $config['install_dir']."/.$name.lock";
+    $lock = get_lock($name);
+
+    if ($lock === true) {
+        echo "$lock_file exists, exiting\n";
+        exit(1);
+    } else {
+        file_put_contents($lock_file, getmypid());
+    }
+}
+
+/**
+ * Release lock file for a given name
+ * @param $name
+ */
+function release_lock($name)
+{
+    global $config;
+    unlink($config['install_dir']."/.$name.lock");
+}
+
+/**
+ * @param $device
+ * @return int|null
+ */
+function get_device_oid_limit($device)
+{
+    global $config;
+
+    $max_oid = $device['snmp_max_oid'];
+
+    if (isset($max_oid) && $max_oid > 0) {
+        return $max_oid;
+    } elseif (isset($config['snmp']['max_oid']) && $config['snmp']['max_oid'] > 0) {
+        return $config['snmp']['max_oid'];
+    } else {
+        return 10;
+    }
 }
