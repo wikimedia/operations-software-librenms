@@ -210,6 +210,44 @@ $config['int_l2tp']                = 0;  # Enable L2TP Port Types
 ```
 Enable / disable certain menus from being shown in the WebUI.
 
+You are able to adjust the number and time frames of the quick select time options for graphs and the mini graphs shown per row.
+
+Quick select:
+```php
+$config['graphs']['mini']['normal'] = array(
+    'day' => '24 Hours',
+    'week' => 'One Week',
+    'month' => 'One Month',
+    'year' => 'One Year',
+);
+$config['graphs']['mini']['widescreen'] = array(
+    'sixhour' => '6 Hours',
+    'day' => '24 Hours',
+    'twoday' => '48 Hours',
+    'week' => 'One Week',
+    'twoweek' => 'Two Weeks',
+    'month' => 'One Month',
+    'twomonth' => 'Two Months',
+    'year' => 'One Year',
+    'twoyear' => 'Two Years',
+);
+```
+
+Mini graphs:
+```php
+$config['graphs']['row']['normal'] = array(
+    'sixhour' => '6 Hours',
+    'day' => '24 Hours',
+    'twoday' => '48 Hours',
+    'week' => 'One Week',
+    'twoweek' => 'Two Weeks',
+    'month' => 'One Month',
+    'twomonth' => 'Two Months',
+    'year' => 'One Year',
+    'twoyear' => 'Two Years',
+);
+```
+
 ```php
 $config['web_mouseover']      = true;
 ```
@@ -321,7 +359,7 @@ The varying options after that are to support the different transports.
 
 ### Alerting
 
-[Alerting](../Alerting/Alerting.md)
+[Alerting](../Alerting/index.md)
 
 ### Billing
 
@@ -505,7 +543,7 @@ $config['syslog_purge']                                   = 30;
 $config['eventlog_purge']                                 = 30;
 $config['authlog_purge']                                  = 30;
 $config['perf_times_purge']                               = 30;
-$config['device_perf_purge']                              = 30;
+$config['device_perf_purge']                              = 7;
 $config['rrd_purge']                                      = 90;// Not set by default
 ```
 These options will ensure data within LibreNMS over X days old is automatically purged. You can alter these individually,

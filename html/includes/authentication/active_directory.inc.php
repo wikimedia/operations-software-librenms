@@ -4,23 +4,28 @@
 
 // disable certificate checking before connect if required
 use LibreNMS\Exceptions\AuthenticationException;
+use LibreNMS\Config;
 
-if (isset($config['auth_ad_check_certificates']) &&
-          !$config['auth_ad_check_certificates']) {
-    putenv('LDAPTLS_REQCERT=never');
-};
+function init_auth()
+{
+    global $ad_init, $ldap_connection, $config;
 
-if (isset($config['auth_ad_debug']) && $config['auth_ad_debug']) {
-    ldap_set_option(null, LDAP_OPT_DEBUG_LEVEL, 7);
+    if (isset($config['auth_ad_check_certificates']) &&
+        !$config['auth_ad_check_certificates']) {
+        putenv('LDAPTLS_REQCERT=never');
+    };
+
+    if (isset($config['auth_ad_debug']) && $config['auth_ad_debug']) {
+        ldap_set_option(null, LDAP_OPT_DEBUG_LEVEL, 7);
+    }
+
+    $ad_init = false;  // this variable tracks if bind has been called so we don't call it multiple times
+    $ldap_connection = @ldap_connect($config['auth_ad_url']);
+
+    // disable referrals and force ldap version to 3
+    ldap_set_option($ldap_connection, LDAP_OPT_REFERRALS, 0);
+    ldap_set_option($ldap_connection, LDAP_OPT_PROTOCOL_VERSION, 3);
 }
-
-$ad_init = false;  // this variable tracks if bind has been called so we don't call it multiple times
-$ldap_connection = @ldap_connect($config['auth_ad_url']);
-
-// disable referrals and force ldap version to 3
-
-ldap_set_option($ldap_connection, LDAP_OPT_REFERRALS, 0);
-ldap_set_option($ldap_connection, LDAP_OPT_PROTOCOL_VERSION, 3);
 
 function authenticate($username, $password)
 {
@@ -33,30 +38,16 @@ function authenticate($username, $password)
             // group membership in one of the configured groups is required
             if (isset($config['auth_ad_require_groupmembership']) &&
                 $config['auth_ad_require_groupmembership']) {
-                $search = ldap_search(
-                    $ldap_connection,
-                    $config['auth_ad_base_dn'],
-                    get_auth_ad_user_filter($username),
-                    array('memberOf')
-                );
-                $entries = ldap_get_entries($ldap_connection, $search);
-                unset($entries[0]['memberof']['count']); //remove the annoying count
-
-                foreach ($entries[0]['memberof'] as $entry) {
-                    $group_cn = get_cn($entry);
-                    if (isset($config['auth_ad_groups'][$group_cn]['level'])) {
-                        // user is in one of the defined groups
+                // cycle through defined groups, test for memberOf-ship
+                foreach ($config['auth_ad_groups'] as $group => $level) {
+                    if (user_in_group($username, $group)) {
                         return true;
                     }
                 }
 
                 // failed to find user
                 if (isset($config['auth_ad_debug']) && $config['auth_ad_debug']) {
-                    if ($entries['count'] == 0) {
-                        throw new AuthenticationException('No groups found for user, check base dn');
-                    } else {
-                        throw new AuthenticationException('User is not in one of the required groups');
-                    }
+                    throw new AuthenticationException('User is not in one of the required groups or user/group is outside the base dn');
                 }
 
                 throw new AuthenticationException();
@@ -97,6 +88,36 @@ function reauthenticate($sess_id, $token)
     }
 
     return false;
+}
+
+
+function user_in_group($username, $groupname)
+{
+    // check if user is member of the given group or nested groups
+
+    global $ldap_connection;
+
+    // get DN for auth_ad_group
+    $search = ldap_search(
+        $ldap_connection,
+        Config::get('auth_ad_base_dn'),
+        "(&(objectClass=group)(cn=$groupname))",
+        array("cn")
+    );
+    $result = ldap_first_entry($ldap_connection, $search);
+    $group_dn = ldap_get_dn($ldap_connection, $result);
+
+    $search = ldap_search(
+        $ldap_connection,
+        Config::get('auth_ad_base_dn'),
+        // add 'LDAP_MATCHING_RULE_IN_CHAIN to the user filter to search for $username in nested $group_dn
+        // limiting to "DN" for shorter array
+        "(&" . get_auth_ad_user_filter($username) . "(memberOf:1.2.840.113556.1.4.1941:=$group_dn))",
+        array("DN")
+    );
+    $entries = ldap_get_entries($ldap_connection, $search);
+
+    return ($entries["count"] > 0);
 }
 
 
@@ -167,22 +188,13 @@ function get_userlevel($username)
         }
     }
 
-    // Find all defined groups $username is in
-    $search = ldap_search(
-        $ldap_connection,
-        $config['auth_ad_base_dn'],
-        get_auth_ad_user_filter($username),
-        array('memberOf')
-    );
-    $entries = ldap_get_entries($ldap_connection, $search);
-    unset($entries[0]['memberof']['count']);
-
-    // Loop the list and find the highest level
-    foreach ($entries[0]['memberof'] as $entry) {
-        $group_cn = get_cn($entry);
-        if (isset($config['auth_ad_groups'][$group_cn]['level']) &&
-             $config['auth_ad_groups'][$group_cn]['level'] > $userlevel) {
-            $userlevel = $config['auth_ad_groups'][$group_cn]['level'];
+    // cycle through defined groups, test for memberOf-ship
+    foreach ($config['auth_ad_groups'] as $group => $level) {
+        if (user_in_group($username, $group)) {
+            // user is in the current group - save new userlevel if higher than before
+            if (Config::get("auth_ad_groups.$group.level") > $userlevel) {
+                $userlevel = Config::get("auth_ad_groups.$group.level");
+            }
         }
     }
 
@@ -447,21 +459,33 @@ function ad_bind($connection, $allow_anonymous = true, $force = false)
         return true; // bind already attempted
     }
 
+    // set timeout
+    ldap_set_option(
+        $connection,
+        LDAP_OPT_NETWORK_TIMEOUT,
+        isset($config['auth_ad_timeout']) ? isset($config['auth_ad_timeout']) : 5
+    );
+
     // With specified bind user
     if (isset($config['auth_ad_binduser'], $config['auth_ad_bindpassword'])) {
         $ad_init = true;
-        return ldap_bind(
+        $bind = ldap_bind(
             $connection,
             "${config['auth_ad_binduser']}@${config['auth_ad_domain']}",
             "${config['auth_ad_bindpassword']}"
         );
+        ldap_set_option($connection, LDAP_OPT_NETWORK_TIMEOUT, -1); // restore timeout
+        return $bind;
     }
+
+    $bind = false;
 
     // Anonymous
     if ($allow_anonymous) {
         $ad_init = true;
-        return ldap_bind($connection);
+        $bind = ldap_bind($connection);
     }
 
-    return false;
+    ldap_set_option($connection, LDAP_OPT_NETWORK_TIMEOUT, -1); // restore timeout
+    return $bind;
 }

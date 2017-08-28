@@ -30,7 +30,7 @@ $config['temp_dir']    = '/tmp';
 $config['log_dir']     = $config['install_dir'].'/logs';
 
 // MySQL extension to use
-$config['db']['extension']       = 'mysqli';//mysql and mysqli available
+$config['db']['extension']       = 'mysqli';
 // MySQL Debug level
 $config['mysql_log_level']       = 'ERROR';
 
@@ -353,6 +353,28 @@ $config['network_map_legend'] = array(
     '90'  => '#ff6600',
     '100' => '#ff0000',
 );
+
+// Default mini graph time options:
+$config['graphs']['mini']['widescreen'] = array(
+    'sixhour' => '6 Hours',
+    'day' => '24 Hours',
+    'twoday' => '48 Hours',
+    'week' => 'One Week',
+    'twoweek' => 'Two Weeks',
+    'month' => 'One Month',
+    'twomonth' => 'Two Months',
+    'year' => 'One Year',
+    'twoyear' => 'Two Years',
+);
+
+$config['graphs']['mini']['normal'] = array(
+    'day' => '24 Hours',
+    'week' => 'One Week',
+    'month' => 'One Month',
+    'year' => 'One Year',
+);
+
+$config['graphs']['row']['normal'] = $config['graphs']['mini']['widescreen'];
 
 // Network Map Items
 $config['network_map_items'] = array('xdp','mac');
@@ -783,7 +805,7 @@ $config['discovery_modules']['ntp']                  = 1;
 $config['discovery_modules']['loadbalancers']        = 0;
 $config['discovery_modules']['mef']                  = 0;
 $config['discovery_modules']['wireless']             = 1;
-
+$config['discovery_modules']['fdb-table']            = 1;
 // Enable daily updates
 $config['update'] = 1;
 
@@ -908,3 +930,10 @@ $config['xirrus_disable_stations']  = false;
 
 // Graphite default port
 $config['graphite']['port']         = 2003;
+
+// Whether to enable secure cookies. Setting this to true enable secure cookies
+// and only send them over HTTPS. Setting this to false will send cookies over
+// HTTP and HTTPS, but they will be insecure. Setting this to $_SERVER["HTTPS"]
+// will send secure cookies when the site is being accessed over HTTPS, and
+// send insecure cookies when the site is being accessed over HTTP.
+$config['secure_cookies'] = $_SERVER["HTTPS"];

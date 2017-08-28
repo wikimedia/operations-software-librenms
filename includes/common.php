@@ -16,6 +16,10 @@
  * the source code distribution for details.
  */
 
+use LibreNMS\Config;
+use LibreNMS\Exceptions\InvalidIpException;
+use LibreNMS\Util\IP;
+
 function generate_priority_icon($priority)
 {
     $map = array(
@@ -338,7 +342,7 @@ function device_by_id_cache($device_id, $refresh = '0')
         $device = $cache['devices']['id'][$device_id];
     } else {
         $device = dbFetchRow("SELECT * FROM `devices` WHERE `device_id` = ?", array($device_id));
-        
+
         //order vrf_lite_cisco with context, this will help to get the vrf_name and instance_name all the time
         $vrfs_lite_cisco = dbFetchRows("SELECT * FROM `vrf_lite_cisco` WHERE `device_id` = ?", array($device_id));
         if (!empty($vrfs_lite_cisco)) {
@@ -475,11 +479,7 @@ function safedescr($descr)
 
 function zeropad($num, $length = 2)
 {
-    while (strlen($num) < $length) {
-        $num = '0'.$num;
-    }
-
-    return $num;
+    return str_pad($num, $length, '0', STR_PAD_LEFT);
 }
 
 function set_dev_attrib($device, $attrib_type, $attrib_value)
@@ -659,10 +659,31 @@ function c_echo($string, $enabled = true)
     if (!$enabled) {
         return;
     }
-    global $console_color;
 
-    if ($console_color) {
-        echo $console_color->convert($string);
+    if (isCli()) {
+        global $console_color;
+        if ($console_color) {
+            echo $console_color->convert($string);
+        } else {
+            // limited functionality for validate.php
+            $search = array(
+                '/%n/',
+                '/%g/',
+                '/%R/',
+                '/%Y/',
+                '/%B/',
+                '/%((%)|.)/' // anything left over replace with empty string
+            );
+            $replace = array(
+                "\e[0m",
+                "\e[32m",
+                "\e[1;31m",
+                "\e[1;33m",
+                "\e[1;34m",
+                ""
+            );
+            echo preg_replace($search, $replace, $string);
+        }
     } else {
         echo preg_replace('/%((%)|.)/', '', $string);
     }
@@ -685,19 +706,19 @@ function is_mib_graph($type, $subtype)
  */
 function is_client_authorized($clientip)
 {
-    global $config;
-
-    if (isset($config['allow_unauth_graphs']) && $config['allow_unauth_graphs']) {
+    if (Config::get('allow_unauth_graphs', false)) {
         d_echo("Unauthorized graphs allowed\n");
         return true;
     }
 
-    if (isset($config['allow_unauth_graphs_cidr'])) {
-        foreach ($config['allow_unauth_graphs_cidr'] as $range) {
-            if (Net_IPv4::ipInNetwork($clientip, $range)) {
+    foreach (Config::get('allow_unauth_graphs_cidr', array()) as $range) {
+        try {
+            if (IP::parse($clientip)->inNetwork($range)) {
                 d_echo("Unauthorized graphs allowed from $range\n");
                 return true;
             }
+        } catch (InvalidIpException $e) {
+            d_echo("Client IP ($clientip) is invalid.\n");
         }
     }
 
@@ -1097,15 +1118,20 @@ function version_info($remote = true)
             $output['github'] = json_decode(curl_exec($api), true);
         }
         list($local_sha, $local_date) = explode('|', rtrim(`git show --pretty='%H|%ct' -s HEAD`));
+        $output['local_ver']    = rtrim(`git describe --tags`);
         $output['local_sha']    = $local_sha;
         $output['local_date']   = $local_date;
         $output['local_branch'] = rtrim(`git rev-parse --abbrev-ref HEAD`);
     }
-    $output['db_schema']   = get_db_schema();
+    $output['db_schema']   = get_db_schema() ?: '?';
     $output['php_ver']     = phpversion();
-    $output['mysql_ver']   = dbFetchCell('SELECT version()');
-    $output['rrdtool_ver'] = implode(' ', array_slice(explode(' ', shell_exec($config['rrdtool'].' --version |head -n1')), 1, 1));
-    $output['netsnmp_ver'] = str_replace('version: ', '', rtrim(shell_exec($config['snmpget'].' --version 2>&1')));
+    $output['mysql_ver']   = dbIsConnected() ? dbFetchCell('SELECT version()') : '?';
+    $output['rrdtool_ver'] = str_replace('1.7.01.7.0', '1.7.0', implode(' ', array_slice(explode(' ', shell_exec(
+        ($config['rrdtool'] ?: 'rrdtool') . ' --version |head -n1'
+    )), 1, 1)));
+    $output['netsnmp_ver'] = str_replace('version: ', '', rtrim(shell_exec(
+        ($config['snmpget'] ?: 'snmpget').' --version 2>&1'
+    )));
 
     return $output;
 }//end version_info()
@@ -1620,15 +1646,16 @@ function load_all_os($existing = false, $cached = true)
 }
 
 /**
- * Update the OS cache file cache/os_defs.cache
+ * * Update the OS cache file cache/os_defs.cache
+ * @param bool $force
  */
-function update_os_cache()
+function update_os_cache($force = false)
 {
     global $config;
     $cache_file = $config['install_dir'] . '/cache/os_defs.cache';
     $cache_keep_time = $config['os_def_cache_time'] - 7200; // 2hr buffer
 
-    if (!is_file($cache_file) || time() - filemtime($cache_file) > $cache_keep_time) {
+    if ($force === true || !is_file($cache_file) || time() - filemtime($cache_file) > $cache_keep_time) {
         d_echo('Updating os_def.cache... ');
         load_all_os(false, false);
         file_put_contents($cache_file, serialize($config['os']));
@@ -1648,6 +1675,19 @@ function fahrenheit_to_celsius($scale, $value)
     }
     return sprintf('%.02f', $value);
 }
+
+/**
+ *
+ * Simply passes the fahrenheit value to fahrenheit_to_celsius()
+ *
+ * @param $value
+ * @return float
+ */
+function conv_fahrenheit($value)
+{
+    return fahrenheit_to_celsius('fahrenheit', $value);
+}
+
 function uw_to_dbm($value)
 {
     return 10 * log10($value / 1000);
@@ -1699,29 +1739,6 @@ function get_vm_parent_id($device)
     }
 
     return dbFetchCell("SELECT `device_id` FROM `vminfo` WHERE `vmwVmDisplayName` = ? OR `vmwVmDisplayName` = ?", array($device['hostname'],$device['hostname'].'.'.$config['mydomain']));
-}
-
-/**
- * @param $string
- * @param string $ver
- * @return bool
- */
-function is_ip($string, $ver = 'ipv4ipv6')
-{
-    if ($ver === 'ipv4ipv6') {
-        if (filter_var($string, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) == true || filter_var($string, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) == true) {
-            return true;
-        }
-    } elseif ($ver === 'ipv4') {
-        if (filter_var($string, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) == true) {
-            return true;
-        }
-    } elseif ($ver === 'ipv6') {
-        if (filter_var($string, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) == true) {
-            return true;
-        }
-    }
-    return false;
 }
 
 /**
