@@ -293,6 +293,11 @@ You can enable the old style network map (only available for individual devices 
 $config['gui']['network-map']['style'] = 'old';
 ```
 
+```php
+$config['percentile_value'] = X;
+```
+Show the `X`th percentile in the graph instead of the default 95th percentile.
+
 ### Add host settings
 The following setting controls how hosts are added.  If a host is added as an ip address it is checked to ensure the ip is not already present.  If the ip is present the host is not added.
 If host is added by hostname this check is not performed.  If the setting is true hostnames are resolved and the check is also performed.  This helps prevents accidental duplicate hosts.
@@ -305,6 +310,14 @@ By default we allow hosts to be added with duplicate sysName's, you can disable 
 
 ```php
 $config['allow_duplicate_sysName'] = false;
+```
+
+### Global poller and discovery modules
+Generally, it is a better to set these [per OS](../Developing/os/Settings.md#poller-and-discovery-modules) or device.
+
+```php
+$config['discovery_modules]['arp-table'] = 1;
+$config['poller_modules]['bgp-peers'] = 0;
 ```
 
 ### SNMP Settings
@@ -603,3 +616,20 @@ $config['ipmi']['type'][] = "open";
 ### Distributed poller settings
 
 [Distributed Poller](../Extensions/Distributed-Poller.md)
+
+## API Settings
+
+### CORS Support
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+
+CORS support for the API is disabled by default. Below you will find the standard options,
+all of which you can configure.
+ 
+```php
+$config['api']['cors']['enabled'] = false;
+$config['api']['cors']['origin'] = '*';
+$config['api']['cors']['maxage'] = '86400';
+$config['api']['cors']['allowmethods'] = array('POST', 'GET', 'PUT', 'DELETE', 'PATCH');
+$config['api']['cors']['allowheaders'] = array('Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'X-Auth-Token');
+```

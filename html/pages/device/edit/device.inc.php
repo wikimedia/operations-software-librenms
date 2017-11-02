@@ -94,7 +94,7 @@ if ($updated && $update_message) {
     </div>
     <div class="col-md-1 col-md-offset-2">
         <?php
-        if ($config['enable_clear_discovery'] == 1) {
+        if ($config['enable_clear_discovery'] == 1  && !$device['snmp_disable']) {
         ?>
             <button type="submit" id="rediscover" data-device_id="<?php echo($device['device_id']); ?>" class="btn btn-primary" name="rediscover"><i class="fa fa-retweet"></i> Rediscover device</button>
         <?php
@@ -213,7 +213,7 @@ if ($updated && $update_message) {
 </script>
 <?php
 print_optionbar_start();
-list($sizeondisk, $numrrds) = foldersize($config['rrd_dir']."/".$device['hostname']);
+list($sizeondisk, $numrrds) = foldersize(get_rrd_dir($device['hostname']));
 echo("Size on Disk: <b>" . formatStorage($sizeondisk) . "</b> in <b>" . $numrrds . " RRD files</b>.");
 print_optionbar_end();
 ?>

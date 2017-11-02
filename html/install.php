@@ -3,13 +3,19 @@ session_start();
 if (empty($_POST) && !empty($_SESSION) && !isset($_REQUEST['stage'])) {
     $_POST = $_SESSION;
 } elseif (!file_exists("../config.php")) {
-    $_SESSION = array_replace($_SESSION, $_POST);
+    $allowed_vars = array('stage','build-ok','dbhost','dbuser','dbpass','dbname','dbport','dbsocket','add_user','add_pass','add_email');
+    foreach ($allowed_vars as $allowed) {
+        if (isset($_POST[$allowed])) {
+            $_SESSION[$allowed] = $_POST[$allowed];
+        }
+    }
 }
 
 $stage = isset($_POST['stage']) ? $_POST['stage'] : 0;
 
 // Before we do anything, if we see config.php, redirect back to the homepage.
 if (file_exists('../config.php') && $stage != 6) {
+    unset($_SESSION['stage']);
     header("Location: /");
     exit;
 }
@@ -38,7 +44,7 @@ $config['db_port']=$dbport;
 $config['db_socket']=$dbsocket;
 
 if (!empty($config['db_socket'])) {
-    $config['db_host'] = '';
+    $config['db_host'] = 'localhost';
     $config['db_port'] = null;
 } else {
     $config['db_socket'] = null;
@@ -183,7 +189,7 @@ foreach ($modules as $extension) {
     echo "<tr class='$row_class'><td>PHP module <strong>$extension</strong></td><td>$status</td><td></td></tr>";
 }
 
-if (is_writable(session_save_path())) {
+if (is_writable(session_save_path() === '' ? '/tmp' : session_save_path())) {
     $status = 'yes';
     $row_class = 'success';
 } else {
@@ -312,7 +318,7 @@ echo "</td></tr>";
             output.innerHTML = e.currentTarget.responseText;
             output.scrollTop = output.scrollHeight - output.clientHeight; // scrolls the output area
         };
-        xhr.timeout = 40000; // if no response for 40s, allow the user to retry
+        xhr.timeout = 90000; // if no response for 90s, allow the user to retry
         xhr.ontimeout = function (e) {
             $("#retry-btn").css("display", "");
         };
@@ -501,16 +507,19 @@ if (auth_usermanagement()) {
 ?>
     <div class="row">
         <div class="col-md-offset-3 col-md-6">
-            <div class="alert alert-danger">You haven't quite finished yet - please go back to the install docs and carry on the necessary steps to finish the setup!</div>
+            <div class="alert alert-danger">
+                <p>You haven't quite finished yet!</p>
+                <p>First, you need to <a href="validate/">validate your install and fix any issues.</a></p>
+            </div>
         </div>
     </div>
     <div class="row">
       <div class="col-md-3">
       </div>
       <div class="col-md-6">
-        <div class="alert alert-success">Thank you for setting up LibreNMS.<br />
-        It would be great if you would consider contributing to our statistics, you can do this on the <a href="about/">/about/</a> page and check the box under Statistics.<br />
-        You can now click <a href="/">here to login to your new install.</a></div>
+        <div class="alert alert-success">
+            <p>Thank you for setting up LibreNMS.</p>
+            <p>It would be great if you would consider contributing to our statistics, you can do this on the <a href="about/">About LibreNMS Page</a> and check the box under Statistics.</p>
       </div>
       <div class="col-md-3">
       </div>

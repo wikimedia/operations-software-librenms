@@ -271,6 +271,7 @@ function add_device()
     // Default status & code to error and change it if we need to.
     $status = 'error';
     $code   = 500;
+    $additional = array();
     // keep scrutinizer from complaining about snmpver not being set for all execution paths
     $snmpver = 'v2c';
     if (empty($data)) {
@@ -284,7 +285,14 @@ function add_device()
     $transport    = $data['transport'] ? mres($data['transport']) : 'udp';
     $poller_group = $data['poller_group'] ? mres($data['poller_group']) : 0;
     $force_add    = $data['force_add'] ? true : false;
-    if ($data['version'] == 'v1' || $data['version'] == 'v2c') {
+    $snmp_disable = ($data['snmp_disable']);
+    if ($snmp_disable) {
+        $additional = array(
+            'os'           => $data['os'] ? mres($data['os']) : 'ping',
+            'hardware'     => $data['hardware'] ? mres($data['hardware']) : '',
+            'snmp_disable' => 1,
+        );
+    } elseif ($data['version'] == 'v1' || $data['version'] == 'v2c') {
         if ($data['community']) {
             $config['snmp']['community'] = array($data['community']);
         }
@@ -309,7 +317,7 @@ function add_device()
     }
     if (empty($message)) {
         try {
-            $device_id = addHost($hostname, $snmpver, $port, $transport, $poller_group, $force_add);
+            $device_id = addHost($hostname, $snmpver, $port, $transport, $poller_group, $force_add, 'ifIndex', $additional);
             $code    = 201;
             $status  = 'ok';
             $message = "Device $hostname ($device_id) has been added successfully";
@@ -486,6 +494,42 @@ function list_bgp()
         'err-msg'      => $message,
         'count'        => $total_bgp_sessions,
         'bgp_sessions' => $bgp_sessions,
+    );
+    $app->response->setStatus($code);
+    $app->response->headers->set('Content-Type', 'application/json');
+    echo _json_encode($output);
+}
+
+
+function list_ospf()
+{
+    global $config;
+    $app        = \Slim\Slim::getInstance();
+    $code       = 500;
+    $status     = 'error';
+    $message    = 'Error retrieving ospf_nbrs';
+    $sql        = '';
+    $sql_params = array();
+    $hostname   = $_GET['hostname'];
+    $device_id  = ctype_digit($hostname) ? $hostname : getidbyname($hostname);
+    if (is_numeric($device_id)) {
+        $sql        = ' AND `device_id`=?';
+        $sql_params = array($device_id);
+    }
+
+    $ospf_neighbours       = dbFetchRows("SELECT * FROM ospf_nbrs WHERE `ospfNbrState` IS NOT NULL AND `ospfNbrState` != '' $sql", $sql_params);
+    $total_ospf_neighbours = count($ospf_neighbours);
+    if (is_numeric($total_ospf_neighbours)) {
+        $code    = 200;
+        $status  = 'ok';
+        $message = '';
+    }
+
+    $output = array(
+        'status'       => "$status",
+        'err-msg'      => $message,
+        'count'        => $total_ospf_neighbours,
+        'ospf_neighbours' => $ospf_neighbours,
     );
     $app->response->setStatus($code);
     $app->response->headers->set('Content-Type', 'application/json');
@@ -1198,12 +1242,20 @@ function list_oxidized()
     $devices = array();
     $device_types = "'".implode("','", $config['oxidized']['ignore_types'])."'";
     $device_os    = "'".implode("','", $config['oxidized']['ignore_os'])."'";
-    foreach (dbFetchRows("SELECT hostname,os,location FROM `devices` LEFT JOIN devices_attribs AS `DA` ON devices.device_id = DA.device_id AND `DA`.attrib_type='override_Oxidized_disable' WHERE `disabled`='0' AND `ignore` = 0 AND (DA.attrib_value = 'false' OR DA.attrib_value IS NULL) AND (`type` NOT IN ($device_types) AND `os` NOT IN ($device_os))") as $device) {
+    foreach (dbFetchRows("SELECT hostname,sysname,os,location FROM `devices` LEFT JOIN devices_attribs AS `DA` ON devices.device_id = DA.device_id AND `DA`.attrib_type='override_Oxidized_disable' WHERE `disabled`='0' AND `ignore` = 0 AND (DA.attrib_value = 'false' OR DA.attrib_value IS NULL) AND (`type` NOT IN ($device_types) AND `os` NOT IN ($device_os))") as $device) {
         if ($config['oxidized']['group_support'] == "true") {
             foreach ($config['oxidized']['group']['hostname'] as $host_group) {
                 if (preg_match($host_group['regex'].'i', $device['hostname'])) {
                     $device['group'] = $host_group['group'];
                     break;
+                }
+            }
+            if (empty($device['group'])) {
+                foreach ($config['oxidized']['group']['sysname'] as $host_group) {
+                    if (preg_match($host_group['regex'].'i', $device['sysname'])) {
+                        $device['group'] = $host_group['group'];
+                        break;
+                    }
                 }
             }
             if (empty($device['group'])) {
@@ -1227,6 +1279,7 @@ function list_oxidized()
             }
         }
         unset($device['location']);
+        unset($device['sysname']);
         $devices[] = $device;
     }
 

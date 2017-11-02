@@ -626,8 +626,13 @@ function is_valid_hostname($hostname)
     // labels to start with digits. No other symbols, punctuation characters, or
     // white space are permitted. While a hostname may not contain other characters,
     // such as the underscore character (_), other DNS names may contain the underscore
+    // maximum length is 253 characters, maximum segment size is 63
 
-    return ctype_alnum(str_replace('_', '', str_replace('-', '', str_replace('.', '', $hostname))));
+    return (
+        preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*\.?$/i", $hostname) //valid chars check
+        && preg_match("/^.{1,253}$/", $hostname) //overall length check
+        && preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*\.?$/", $hostname)
+    );
 }
 
 /*
@@ -952,10 +957,12 @@ function enable_os_graphs($os, &$graph_enable)
  */
 function enable_graphs($device, &$graph_enable)
 {
-    // These are standard graphs we should have for all systems
+    // These are standard graphs we should have for (almost) all systems
     $graph_enable['poller']['poller_perf']         = 'device_poller_perf';
-    $graph_enable['poller']['poller_modules_perf'] = 'device_poller_modules_perf';
-    if (can_ping_device($device) === true) {
+    if (!$device['snmp_disable']) {
+        $graph_enable['poller']['poller_modules_perf'] = 'device_poller_modules_perf';
+    }
+    if (get_dev_attrib($device, "override_icmp_disable") != "true" && can_ping_device($device) === true) {
         $graph_enable['poller']['ping_perf'] = 'device_ping_perf';
     }
 
@@ -1099,9 +1106,10 @@ function parse_location($location)
 
 /**
  * Returns version info
+ * @param bool $remote fetch remote version info from github
  * @return array
-**/
-function version_info($remote = true)
+ */
+function version_info($remote = false)
 {
     global $config;
     $output = array();
@@ -1651,14 +1659,22 @@ function load_all_os($existing = false, $cached = true)
  */
 function update_os_cache($force = false)
 {
-    global $config;
-    $cache_file = $config['install_dir'] . '/cache/os_defs.cache';
-    $cache_keep_time = $config['os_def_cache_time'] - 7200; // 2hr buffer
+    $install_dir = Config::get('install_dir');
+    $cache_file = "$install_dir/cache/os_defs.cache";
+    $cache_keep_time = Config::get('os_def_cache_time', 86400) - 7200; // 2hr buffer
 
     if ($force === true || !is_file($cache_file) || time() - filemtime($cache_file) > $cache_keep_time) {
         d_echo('Updating os_def.cache... ');
+
+        // remove previously cached os settings and replace with user settings
+        $config = array('os' => array()); // local $config variable, not global
+        include "$install_dir/config.php";
+        Config::set('os', $config['os']);
+
+        // load the os defs fresh from cache (merges with existing OS settings)
         load_all_os(false, false);
-        file_put_contents($cache_file, serialize($config['os']));
+
+        file_put_contents($cache_file, serialize(Config::get('os')));
         d_echo("Done\n");
     }
 }
@@ -1691,7 +1707,11 @@ function uw_to_dbm($value)
  */
 function set_null($value, $default = null, $min = null)
 {
-    if (!is_numeric($value)) {
+    if (is_nan($value)) {
+        return $default;
+    } elseif (is_infinite($value)) {
+        return $default;
+    } elseif (!is_numeric($value)) {
         return $default;
     } elseif (isset($min) && $value < $min) {
         return $default;
@@ -1705,7 +1725,11 @@ function set_null($value, $default = null, $min = null)
  */
 function set_numeric($value, $default = 0)
 {
-    if (!isset($value) || !is_numeric($value)) {
+    if (is_nan($value) ||
+        is_infinite($value) ||
+        !isset($value) ||
+        !is_numeric($value)
+    ) {
         $value = $default;
     }
     return $value;

@@ -29,6 +29,7 @@ source: Support/FAQ.md
  - [Why can't Normal and Global View users see Oxidized?](#faq29)
  - [What is the Demo User for?](#faq30)
  - [Why does modifying 'Default Alert Template' fail?](#faq31)
+ - [Why would alert un-mute itself](#faq32)
  
 ### Developing
  - [How do I add support for a new OS?](#faq8)
@@ -62,7 +63,7 @@ We have a few methods for you to get in touch to ask for help.
 
 [Community Forum](https://community.librenms.org)
 
-[IRC](https://webchat.freenode.net/) Freenode ##librenms
+[Discord](https://t.libren.ms/discord)
 
 [Bug Reports](https://github.com/librenms/librenms/issues)
 
@@ -74,7 +75,7 @@ Supported is quite a strong word :) The 'officially' supported distros are:
  - Red Hat / CentOS
  - Gentoo
 
-However we will always aim to help wherever possible so if you are running a distro that isn't one of the above then give it a try anyway and if you need help then jump on the irc channel.
+However we will always aim to help wherever possible so if you are running a distro that isn't one of the above then give it a try anyway and if you need help then jump on the [discord server](https://t.libren.ms/discord).
 
 #### <a name="faq5"> Do you have a demo available?</a>
 
@@ -156,7 +157,7 @@ Run `./validate.php` as root from within your install.
 
 Re-run `./validate.php` once you've resolved any issues raised.
 
-You have an odd issue - we'd suggest you join our irc channel to discuss.
+You have an odd issue - we'd suggest you join our [discord server](https://t.libren.ms/discord) to discuss.
 
 #### <a name="faq21"> What do the values mean in my graphs?</a>
 
@@ -217,12 +218,12 @@ $config['device_traffic_iftype'][] = '/ppp/';
 ```
 #### <a name="faq24"> How do I move my LibreNMS install to another server?</a>
 
-If you are moving from one CPU architecture to another then you will need to dump the rrd files and re-create them. If you are in 		
-this scenario then you can use [Dan Brown's migration scripts](https://vlan50.com/2015/04/17/migrating-from-observium-to-librenms/).		
-		
-If you are just moving to another server with the same CPU architecture then the following steps should be all that's needed:		
-		
-    - Install LibreNMS as per our normal documentation, you don't need to run through the web installer or building the sql schema.		
+If you are moving from one CPU architecture to another then you will need to dump the rrd files and re-create them. If you are in     
+this scenario then you can use [Dan Brown's migration scripts](https://vlan50.com/2015/04/17/migrating-from-observium-to-librenms/).    
+    
+If you are just moving to another server with the same CPU architecture then the following steps should be all that's needed:   
+    
+    - Install LibreNMS as per our normal documentation, you don't need to run through the web installer or building the sql schema.   
     - Stop cron by commenting out all lines in `/etc/cron.d/librenms`
     - Dump the MySQL database `librenms` and import this into your new server.
     - Copy the `rrd/` folder to the new server.
@@ -347,3 +348,6 @@ This template's entry could be missing in the database. Please run:
 ```bash
 mysql -u librenms -p < sql-schema/202.sql
 ```
+### <a name="faq32"> Why would alert un-mute itself?</a> 
+If alert un-mutes itself then it most likely means that the alert cleared and is then triggered again.
+Please review eventlog as it will tell you in there.

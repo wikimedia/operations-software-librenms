@@ -3,8 +3,8 @@
 // easier to rewrite for Active Directory than to bash it into existing LDAP implementation
 
 // disable certificate checking before connect if required
-use LibreNMS\Exceptions\AuthenticationException;
 use LibreNMS\Config;
+use LibreNMS\Exceptions\AuthenticationException;
 
 function init_auth()
 {
@@ -29,24 +29,23 @@ function init_auth()
 
 function authenticate($username, $password)
 {
-    global $config, $ldap_connection, $ad_init;
+    global $ldap_connection, $ad_init;
 
     if ($ldap_connection) {
         // bind with sAMAccountName instead of full LDAP DN
-        if ($username && $password && ldap_bind($ldap_connection, "{$username}@{$config['auth_ad_domain']}", $password)) {
+        if ($username && $password && ldap_bind($ldap_connection, $username . '@' . Config::get('auth_ad_domain'), $password)) {
             $ad_init = true;
             // group membership in one of the configured groups is required
-            if (isset($config['auth_ad_require_groupmembership']) &&
-                $config['auth_ad_require_groupmembership']) {
+            if (Config::get('auth_ad_require_groupmembership', true)) {
                 // cycle through defined groups, test for memberOf-ship
-                foreach ($config['auth_ad_groups'] as $group => $level) {
+                foreach (Config::get('auth_ad_groups', array()) as $group => $level) {
                     if (user_in_group($username, $group)) {
                         return true;
                     }
                 }
 
                 // failed to find user
-                if (isset($config['auth_ad_debug']) && $config['auth_ad_debug']) {
+                if (Config::get('auth_ad_debug', false)) {
                     throw new AuthenticationException('User is not in one of the required groups or user/group is outside the base dn');
                 }
 
@@ -60,7 +59,7 @@ function authenticate($username, $password)
 
     if (!isset($password) || $password == '') {
         throw new AuthenticationException('A password is required');
-    } elseif (isset($config['auth_ad_debug']) && $config['auth_ad_debug']) {
+    } elseif (Config::get('auth_ad_debug', false)) {
         ldap_get_option($ldap_connection, LDAP_OPT_DIAGNOSTIC_MESSAGE, $extended_error);
         throw new AuthenticationException(ldap_error($ldap_connection).'<br />'.$extended_error);
     }
@@ -70,7 +69,7 @@ function authenticate($username, $password)
 
 function reauthenticate($sess_id, $token)
 {
-    global $config, $ldap_connection;
+    global $ldap_connection;
 
     if (ad_bind($ldap_connection, false, true)) {
         $sess_id = clean($sess_id);
@@ -78,7 +77,7 @@ function reauthenticate($sess_id, $token)
         list($username, $hash) = explode('|', $token);
 
         if (!user_exists($username)) {
-            if (isset($config['auth_ad_debug']) && $config['auth_ad_debug']) {
+            if (Config::get('auth_ad_debug', false)) {
                 throw new AuthenticationException("$username is not a valid AD user");
             }
             throw new AuthenticationException();
@@ -97,15 +96,33 @@ function user_in_group($username, $groupname)
 
     global $ldap_connection;
 
+    $search_filter = "(&(objectClass=group)(cn=$groupname))";
+
     // get DN for auth_ad_group
     $search = ldap_search(
         $ldap_connection,
         Config::get('auth_ad_base_dn'),
-        "(&(objectClass=group)(cn=$groupname))",
+        $search_filter,
         array("cn")
     );
-    $result = ldap_first_entry($ldap_connection, $search);
-    $group_dn = ldap_get_dn($ldap_connection, $result);
+    $result = ldap_get_entries($ldap_connection, $search);
+
+    if ($result == false || $result['count'] !== 1) {
+        if (Config::get('auth_ad_debug', false)) {
+            if ($result == false) {
+                // FIXME: what went wrong?
+                throw new AuthenticationException("LDAP query failed for group '$groupname' using filter '$search_filter'");
+            } elseif ($result['count'] == 0) {
+                throw new AuthenticationException("Failed to find group matching '$groupname' using filter '$search_filter'");
+            } elseif ($result['count'] > 1) {
+                throw new AuthenticationException("Multiple groups returned for '$groupname' using filter '$search_filter'");
+            }
+        }
+
+        throw new AuthenticationException();
+    }
+
+    $group_dn = $result[0]["dn"];
 
     $search = ldap_search(
         $ldap_connection,
@@ -178,23 +195,23 @@ function user_exists($username)
 
 function get_userlevel($username)
 {
-    global $config, $ldap_connection;
+    global $ldap_connection;
     ad_bind($ldap_connection); // make sure we called bind
 
     $userlevel = 0;
-    if (isset($config['auth_ad_require_groupmembership']) && $config['auth_ad_require_groupmembership'] == 0) {
-        if (isset($config['auth_ad_global_read']) && $config['auth_ad_global_read'] === 1) {
+    if (!Config::get('auth_ad_require_groupmembership', true)) {
+        if (Config::get('auth_ad_global_read', false)) {
             $userlevel = 5;
         }
     }
 
     // cycle through defined groups, test for memberOf-ship
-    foreach ($config['auth_ad_groups'] as $group => $level) {
-        if (user_in_group($username, $group)) {
-            // user is in the current group - save new userlevel if higher than before
-            if (Config::get("auth_ad_groups.$group.level") > $userlevel) {
-                $userlevel = Config::get("auth_ad_groups.$group.level");
+    foreach (Config::get('auth_ad_groups', array()) as $group => $level) {
+        try {
+            if (user_in_group($username, $group)) {
+                $userlevel = max($userlevel, $level['level']);
             }
+        } catch (AuthenticationException $e) {
         }
     }
 
