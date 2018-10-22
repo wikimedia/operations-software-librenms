@@ -9,22 +9,28 @@ Currently we have support for the following health metrics along with the values
 | Class                           | Measurement                 |
 | ------------------------------- | --------------------------- |
 | airflow                         | cfm                         |
+| ber                             | ratio                       |
 | charge                          | %                           |
+| chromatic_disperision           | ps/nm                       |
 | cooling                         | W                           |
 | current                         | A                           |
 | dbm                             | dBm                         |
+| delay                           | s                           |
+| eer                             | eer                         |
 | fanspeed                        | rpm                         |
 | frequency                       | Hz                          |
 | humidity                        | %                           |
 | load                            | %                           |
 | power                           | W                           |
 | pressure                        | kPa                         |
+| quality_factor                  | dB                          |
 | runtime                         | Min                         |
 | signal                          | dBm                         |
 | snr                             | SNR                         |
 | state                           | #                           |
 | temperature                     | C                           |
 | voltage                         | V                           |
+| waterflow                       | l/m                         |
 
 #### Simple health discovery
 
@@ -32,7 +38,7 @@ We have support for defining health / sensor discovery using YAML files so that 
 
 > Please note that DISPLAY-HINTS are disabled so ensure you use the correct divisor / multiplier if applicable.
 
-All yaml files are located in `includes/definitions/discovery/$os.yaml`. Defining the information hear is not always 
+All yaml files are located in `includes/definitions/discovery/$os.yaml`. Defining the information here is not always 
 possible and is heavily reliant on vendors being sensible with the MIBs they generate. Only snmp walks are supported 
 and you must provide a sane table that can be traversed and contains all of the data you need. We will use netbotz as 
 an example here.
@@ -69,23 +75,36 @@ The only sensor we have defined here is airflow. The available options are as fo
   - `num_oid` (required): This is the numerical OID that contains `value`. This should always be without the appended `index`.
   - `divisor` (optional): This is the divisor to use against the returned `value`.
   - `multiplier` (optional): This is the multiplier to use against the returned `value`.
-  - `low_limit` (optional): This is the critical low threshold that `value` should be (used in alerting).
-  - `low_warn_limit` (optional): This is the warning low threshold that `value` should be (used in alerting).
-  - `warn_limit` (optional): This is the warning high threshold that `value` should be (used in alerting).
-  - `high_limit` (optional): This is the critical high threshold that `value` should be (used in alerting).
+  - `low_limit` (optional): This is the critical low threshold that `value` should be (used in alerting). If an OID is specified then divisor / multiplier are used.
+  - `low_warn_limit` (optional): This is the warning low threshold that `value` should be (used in alerting). If an OID is specified then divisor / multiplier are used.
+  - `warn_limit` (optional): This is the warning high threshold that `value` should be (used in alerting). If an OID is specified then divisor / multiplier are used.
+  - `high_limit` (optional): This is the critical high threshold that `value` should be (used in alerting). If an OID is specified then divisor / multiplier are used.
   - `descr` (required): The visible label for this sensor. It can be a key with in the table or a static string, optionally using `{{ index }}`
   - `index` (optional): This is the index value we use to uniquely identify this sensor. `{{ $index }}` will be replaced by the `index` from the snmp walk.
-  - `skip_values` (optional): This is an array of values we should skip over.
+  - `skip_values` (optional): This is an array of values we should skip over (see note below).
   - `skip_value_lt` (optional): If sensor value is less than this, skip the discovery.
   - `skip_value_gt` (optional): If sensor value is greater than this, skip the discovery.
+  - `entPhysicalIndex` (optional): If the sensor belongs to a physical entity then you can specify the index here.
+  - `entPhysicalIndex_measured` (optional): If the sensor belongs to a physical entity then you can specify the entity type here.
+  - `user_func` (optional): You can provide a function name for the sensors value to be processed through (i.e. Convert fahrenheit to celsius use `fahrenheit_to_celsius`)
 
 For `options:` you have the following available:
 
   - `divisor`: This is the divisor to use against the returned `value`.
   - `multiplier`: This is the multiplier to use against the returned `value`.
-  - `skip_values`: This is an array of values we should skip over.
+  - `skip_values`: This is an array of values we should skip over (see note below).
   - `skip_value_lt`: If sensor value is less than this, skip the discovery.
   - `skip_value_gt`: If sensor value is greater than this, skip the discovery.
+
+> `skip_values` can also compare items within the OID table against values. One example of this is:
+
+```yaml
+                    skip_values:
+                    -
+                      oid: sensUnit
+                      op: '!='
+                      value: 4
+```
 
 If you aren't able to use yaml to perform the sensor discovery, you will most likely need to use Advanced health discovery. 
 

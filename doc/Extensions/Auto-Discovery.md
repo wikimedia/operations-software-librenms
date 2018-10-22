@@ -6,7 +6,7 @@ source: Extensions/Auto-Discovery.md
 LibreNMS provides the ability to automatically add devices on your network, we can do this via
 a few methods which will be explained below and also indicate if they are enabled by default.
 
-All discovery methods run when discovery.php runs (every 6 hours by default and within 5 minutes for new devices).
+All discovery methods run when discovery runs (every 6 hours by default and within 5 minutes for new devices).
 
 > Please note that you need at least ONE device added before auto-discovery will work.
 
@@ -22,7 +22,7 @@ $config['snmp']['community'][] = "my_custom_community";
 $config['snmp']['community'][] = "another_community";
 
 // v3
-$config['snmp']['v3'][0]['authlevel'] = 'AuthPriv';
+$config['snmp']['v3'][0]['authlevel'] = 'authPriv';
 $config['snmp']['v3'][0]['authname'] = 'my_username';
 $config['snmp']['v3'][0]['authpass'] = 'my_password';
 $config['snmp']['v3'][0]['authalgo'] = 'MD5';
@@ -77,7 +77,7 @@ Disabled by default.
 
 Adds devices that are listed in another device's arp table.  This module depends on the arp-table module being enabled and returning data.
 
-To enable, switch on globally the `$config['discovery_modules']['discovery-arp'] = 1;` or per device within the Modules section.
+To enable, switch on globally the `$config['discovery_modules']['discovery-arp'] = true;` or per device within the Modules section.
 
 ### XDP
 Enabled by default.

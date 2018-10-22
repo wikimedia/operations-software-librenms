@@ -1,36 +1,46 @@
 <?php
 echo ' ENTITY-SENSOR: ';
 echo 'Caching OIDs:';
-if (!is_array($entity_array)) {
+if (empty($entity_array)) {
     $entity_array = array();
     echo ' entPhysicalDescr';
-    $entity_array = snmpwalk_cache_multi_oid($device, 'entPhysicalDescr', $entity_array, 'CISCO-ENTITY-SENSOR-MIB');
-    echo ' entPhysicalName';
-    $entity_array = snmpwalk_cache_multi_oid($device, 'entPhysicalName', $entity_array, 'CISCO-ENTITY-SENSOR-MIB');
+    $entity_array = snmpwalk_cache_multi_oid($device, 'entPhysicalDescr', $entity_array, 'ENTITY-MIB');
+    if (!empty($entity_array)) {
+        echo ' entPhysicalName';
+        $entity_array = snmpwalk_cache_multi_oid($device, 'entPhysicalName', $entity_array, 'ENTITY-MIB');
+    }
 }
-$oids = array();
-echo ' entPhySensorType';
-$oids = snmpwalk_cache_multi_oid($device, 'entPhySensorType', $oids, 'ENTITY-SENSOR-MIB');
-echo ' entPhySensorScale';
-$oids = snmpwalk_cache_multi_oid($device, 'entPhySensorScale', $oids, 'ENTITY-SENSOR-MIB');
-echo ' entPhySensorPrecision';
-$oids = snmpwalk_cache_multi_oid($device, 'entPhySensorPrecision', $oids, 'ENTITY-SENSOR-MIB');
-echo ' entPhySensorValue';
-$oids = snmpwalk_cache_multi_oid($device, 'entPhySensorValue', $oids, 'ENTITY-SENSOR-MIB');
-if ($device['os'] === 'arista_eos') {
-    require 'includes/discovery/sensors/misc/arista-eos-limits.inc.php';
+
+if (!empty($entity_array)) {
+    echo ' entPhySensorType';
+    $entity_oids = snmpwalk_cache_multi_oid($device, 'entPhySensorType', [], 'ENTITY-SENSOR-MIB');
+    echo ' entPhySensorScale';
+    $entity_oids = snmpwalk_cache_multi_oid($device, 'entPhySensorScale', $entity_oids, 'ENTITY-SENSOR-MIB');
+    echo ' entPhySensorPrecision';
+    $entity_oids = snmpwalk_cache_multi_oid($device, 'entPhySensorPrecision', $entity_oids, 'ENTITY-SENSOR-MIB');
+    echo ' entPhySensorValue';
+    $entity_oids = snmpwalk_cache_multi_oid($device, 'entPhySensorValue', $entity_oids, 'ENTITY-SENSOR-MIB');
+    if ($device['os'] === 'arista_eos') {
+        $entity_oids = snmpwalk_cache_oid($device, 'aristaEntSensorThresholdTable', $entity_oids, 'ARISTA-ENTITY-SENSOR-MIB');
+    }
+    echo ' entPhySensorOperStatus';
+    $entity_oids = snmpwalk_cache_multi_oid($device, 'entPhySensorOperStatus', $entity_oids, 'ENTITY-SENSOR-MIB');
 }
-$entitysensor['voltsDC']   = 'voltage';
-$entitysensor['voltsAC']   = 'voltage';
-$entitysensor['amperes']   = 'current';
-$entitysensor['watts']     = 'power';
-$entitysensor['hertz']     = 'freq';
-$entitysensor['percentRH'] = 'humidity';
-$entitysensor['rpm']       = 'fanspeed';
-$entitysensor['celsius']   = 'temperature';
-$entitysensor['dBm']       = 'dbm';
-if (is_array($oids)) {
-    foreach ($oids as $index => $entry) {
+
+if (!empty($entity_oids)) {
+    $entitysensor = array(
+        'voltsDC'   => 'voltage',
+        'voltsAC'   => 'voltage',
+        'amperes'   => 'current',
+        'watts'     => 'power',
+        'hertz'     => 'freq',
+        'percentRH' => 'humidity',
+        'rpm'       => 'fanspeed',
+        'celsius'   => 'temperature',
+        'dBm'       => 'dbm',
+    );
+
+    foreach ($entity_oids as $index => $entry) {
         $low_limit      = null;
         $low_warn_limit = null;
         $warn_limit     = null;
@@ -42,11 +52,19 @@ if (is_array($oids)) {
         }
         if ($entitysensor[$entry['entPhySensorType']] && is_numeric($entry['entPhySensorValue']) && is_numeric($index)) {
             $entPhysicalIndex = $index;
-            $oid              = '.1.3.6.1.2.1.99.1.1.1.4.'.$index;
+            $oid              = '.1.3.6.1.2.1.99.1.1.1.4.' . $index;
             $current          = $entry['entPhySensorValue'];
-            // ENTITY-SENSOR-MIB::entPhySensorUnitsDisplay.11 = STRING: "C"
-            $descr = ucwords($entity_array[$index]['entPhysicalName']);
-            // if ($descr || $device['os'] == "iosxr")
+            if ($device['os'] === 'arris-d5') {
+                $card = str_split($index);
+                if (count($card) === 3) {
+                    $card = $card[0] . "00";
+                } elseif (count($card) === 4) {
+                    $card = $card[0] . $card[1] . "00";
+                }
+                $descr = ucwords($entity_array[$card]['entPhysicalName']) . " " . ucwords($entity_array[$index]['entPhysicalDescr']);
+            } else {
+                $descr = ucwords($entity_array[$index]['entPhysicalName']);
+            }
             if ($descr) {
                 $descr = rewrite_entity_descr($descr);
             } else {
@@ -120,8 +138,11 @@ if (is_array($oids)) {
                     $valid_sensor = false;
                 }
             }
-            // echo($descr . "|" . $index . "|" .$current . "|" . $multiplier . "|" . $divisor ."|" . $entry['entPhySensorScale'] . "|" . $entry['entPhySensorPrecision'] . "\n");
             if ($current == '-127' || ($device['os'] == 'asa' && str_contains($device['hardware'], 'sc'))) {
+                $valid_sensor = false;
+            }
+            // Check for valid sensors
+            if ($entry['entPhySensorOperStatus'] === 'unavailable') {
                 $valid_sensor = false;
             }
             if ($valid_sensor && dbFetchCell("SELECT COUNT(*) FROM `sensors` WHERE device_id = ? AND `sensor_class` = ? AND `sensor_type` = 'cisco-entity-sensor' AND `sensor_index` = ?", array($device['device_id'], $type, $index)) == '0') {

@@ -1,23 +1,25 @@
 source: Installation/Installation-CentOS-7-Nginx.md
 > NOTE: These instructions assume you are the **root** user.  If you are not, prepend `sudo` to the shell commands (the ones that aren't at `mysql>` prompts) or temporarily become a user with root privileges with `sudo -s` or `sudo -i`.
 
+**Please note the minimum supported PHP version is 5.6.4**
+
 ## Install Required Packages ##
 
     yum install epel-release
 
     rpm -Uvh https://mirror.webtatic.com/yum/el7/webtatic-release.rpm
 
-    yum install cronie fping git ImageMagick jwhois mariadb mariadb-server mtr MySQL-python net-snmp net-snmp-utils nginx nmap php71w php71w-cli php71w-common php71w-curl php71w-fpm php71w-gd php71w-mcrypt php71w-mysql php71w-snmp php71w-xml php71w-zip python-memcached rrdtool
+    yum install composer cronie fping git ImageMagick jwhois mariadb mariadb-server mtr MySQL-python net-snmp net-snmp-utils nginx nmap php72w php72w-cli php72w-common php72w-curl php72w-fpm php72w-gd php72w-mbstring php72w-mysqlnd php72w-process php72w-snmp php72w-xml php72w-zip python-memcached rrdtool
 
 #### Add librenms user
 
     useradd librenms -d /opt/librenms -M -r
     usermod -a -G librenms nginx
 
-#### Install LibreNMS
+#### Download LibreNMS
 
     cd /opt
-    git clone https://github.com/librenms/librenms.git librenms
+    composer create-project --no-dev --keep-vcs librenms/librenms librenms dev-master
 
 ## DB Server ##
 
@@ -37,13 +39,10 @@ exit
 
     vi /etc/my.cnf
 
-> NOTE: Whilst we are working on ensuring LibreNMS is compatible with MySQL strict mode, for now, please disable this after mysql is installed.
-
 Within the `[mysqld]` section please add:
 
 ```bash
 innodb_file_per_table=1
-sql-mode=""
 lower_case_table_names=0
 ```
     systemctl enable mariadb
@@ -68,7 +67,7 @@ user = nginx
 group = apache   ; keep group as apache
 
 ;listen = 127.0.0.1:9000
-listen = /var/run/php-fpm/php7.1-fpm.sock
+listen = /var/run/php-fpm/php7.2-fpm.sock
 
 listen.owner = nginx
 listen.group = nginx
@@ -103,7 +102,7 @@ server {
  location ~ \.php {
   include fastcgi.conf;
   fastcgi_split_path_info ^(.+\.php)(/.+)$;
-  fastcgi_pass unix:/var/run/php-fpm/php7.1-fpm.sock;
+  fastcgi_pass unix:/var/run/php-fpm/php7.2-fpm.sock;
  }
  location ~ /\.ht {
   deny all;
@@ -123,7 +122,7 @@ Install the policy tool for SELinux:
 
     yum install policycoreutils-python
 
-Configure the contexts needed by LibreNMS:
+##### Configure the contexts needed by LibreNMS:
 
     semanage fcontext -a -t httpd_sys_content_t '/opt/librenms/logs(/.*)?'
     semanage fcontext -a -t httpd_sys_rw_content_t '/opt/librenms/logs(/.*)?'
@@ -131,8 +130,36 @@ Configure the contexts needed by LibreNMS:
     semanage fcontext -a -t httpd_sys_content_t '/opt/librenms/rrd(/.*)?'
     semanage fcontext -a -t httpd_sys_rw_content_t '/opt/librenms/rrd(/.*)?'
     restorecon -RFvv /opt/librenms/rrd/
+    semanage fcontext -a -t httpd_sys_content_t '/opt/librenms/storage(/.*)?'
+    semanage fcontext -a -t httpd_sys_rw_content_t '/opt/librenms/storage(/.*)?'
+    restorecon -RFvv /opt/librenms/storage/
+    semanage fcontext -a -t httpd_sys_content_t '/opt/librenms/bootstrap/cache(/.*)?'
+    semanage fcontext -a -t httpd_sys_rw_content_t '/opt/librenms/bootstrap/cache(/.*)?'
+    restorecon -RFvv /opt/librenms/bootstrap/cache/
     setsebool -P httpd_can_sendmail=1
     setsebool -P httpd_execmem 1
+
+##### Allow fping
+Create the file http_fping.tt with the following contents. You can create this file anywhere, as it is a throw-away file. The last step in this install procedure will install the module in the proper location.
+```
+module http_fping 1.0;
+
+require {
+type httpd_t;
+class capability net_raw;
+class rawip_socket { getopt create setopt write read };
+}
+
+#============= httpd_t ==============
+allow httpd_t self:capability net_raw;
+allow httpd_t self:rawip_socket { getopt create setopt write read };
+```
+
+Then run these commands
+
+    checkmodule -M -m -o http_fping.mod http_fping.tt
+    semodule_package -o http_fping.pp -m http_fping.mod
+    semodule -i http_fping.pp
 
 #### Allow access through firewall
 
@@ -141,7 +168,7 @@ Configure the contexts needed by LibreNMS:
     firewall-cmd --zone public --add-service https
     firewall-cmd --permanent --zone public --add-service https
 
-#### Configure snmpd
+### Configure snmpd
 
     cp /opt/librenms/snmpd.conf.example /etc/snmp/snmpd.conf
 
@@ -156,7 +183,7 @@ Edit the text which says `RANDOMSTRINGGOESHERE` and set your own community strin
 
 ### Cron job
 
-    cp /opt/librenms/librenms.nonroot.cron /etc/cron.d/librenms`
+    cp /opt/librenms/librenms.nonroot.cron /etc/cron.d/librenms
 
 #### Copy logrotate config
 
@@ -167,14 +194,18 @@ LibreNMS keeps logs in `/opt/librenms/logs`. Over time these can become large an
 ### Set permissions
 
     chown -R librenms:librenms /opt/librenms
-    setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs
-    setfacl -R -m g::rwx /opt/librenms/rrd /opt/librenms/logs
+    setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
+    setfacl -R -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
 
 ## Web installer ##
 
 Now head to the web installer and follow the on-screen instructions.
 
     http://librenms.example.com/install.php
+    
+The web installer might prompt you to create a `config.php` file in your librenms install location manually, copying the content displayed on-screen to the file. If you have to do this, please remember to set the permissions on config.php after you copied the on-screen contents to the file. Run:
+
+    chown librenms:librenms /opt/librenms/config.php
 
 ### Final steps
 
@@ -206,4 +237,4 @@ Now that you've installed LibreNMS, we'd suggest that you have a read of a few o
 
 We hope you enjoy using LibreNMS. If you do, it would be great if you would consider opting into the stats system we have, please see [this page](http://docs.librenms.org/General/Callback-Stats-and-Privacy/) on what it is and how to enable it.
 
-If you would like to help make LibreNMS better there are [many ways to help](http://docs.librenms.org/Support/FAQ/#what-can-i-do-to-help). You can also [back LibreNMS on Open Collective](https://t.libren.ms/donations). 
+If you would like to help make LibreNMS better there are [many ways to help](http://docs.librenms.org/Support/FAQ/#what-can-i-do-to-help). You can also [back LibreNMS on Open Collective](https://t.libren.ms/donations).

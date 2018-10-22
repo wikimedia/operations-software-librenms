@@ -1,34 +1,32 @@
 <?php
 
+use LibreNMS\Authentication\LegacyAuth;
 use LibreNMS\Exceptions\HostUnreachableException;
 use LibreNMS\Util\IP;
 
 $no_refresh = true;
 
-if ($_SESSION['userlevel'] < 10) {
+if (!LegacyAuth::user()->hasGlobalAdmin()) {
     include 'includes/error-no-perm.inc.php';
 
     exit;
 }
 
-if (isset($_POST['hostname'])) {
-    $hostname = clean($_POST['hostname']);
-    if (!is_valid_hostname($hostname) && !IP::isValid($hostname)) {
-        print_error('Invalid hostname or IP.');
-        $hostname = false;
-    }
-} else {
-    $hostname = false;
-}
-
-$snmp_enabled = isset($_POST['snmp']);
-
-if ($hostname !== false) {
-    echo '<div class="row">
+echo '<div class="row">
             <div class="col-sm-3">
             </div>
             <div class="col-sm-6">';
-    if ($_SESSION['userlevel'] > '5') {
+
+// first load enabled, after that check snmp variable
+$snmp_enabled = !isset($_POST['hostname']) || isset($_POST['snmp']);
+
+if (!empty($_POST['hostname'])) {
+    $hostname = clean($_POST['hostname']);
+    if (!is_valid_hostname($hostname) && !IP::isValid($hostname)) {
+        print_error("Invalid hostname or IP: $hostname");
+    }
+
+    if (LegacyAuth::user()->hasGlobalRead()) {
         // Settings common to SNMPv2 & v3
         if ($_POST['port']) {
             $port = clean($_POST['port']);
@@ -49,10 +47,11 @@ if ($hostname !== false) {
                 'snmp_disable' => 1,
                 'os'           => $_POST['os'] ? mres($_POST['os_id']) : "ping",
                 'hardware'     => mres($_POST['hardware']),
+                'sysName'      => mres($_POST['sysName'])
             );
         } elseif ($_POST['snmpver'] === 'v2c' || $_POST['snmpver'] === 'v1') {
             if ($_POST['community']) {
-                $config['snmp']['community'] = array(clean($_POST['community']));
+                $config['snmp']['community'] = array(clean($_POST['community'], false));
             }
 
             $snmpver = clean($_POST['snmpver']);
@@ -60,11 +59,11 @@ if ($hostname !== false) {
         } elseif ($_POST['snmpver'] === 'v3') {
             $v3 = array(
                    'authlevel'  => clean($_POST['authlevel']),
-                   'authname'   => clean($_POST['authname']),
-                   'authpass'   => clean($_POST['authpass']),
+                   'authname'   => clean($_POST['authname'], false),
+                   'authpass'   => clean($_POST['authpass'], false),
                    'authalgo'   => clean($_POST['authalgo']),
-                   'cryptopass' => clean($_POST['cryptopass']),
-                   'cryptoalgo' => clean($_POST['cryptoalgo']),
+                   'cryptopass' => clean($_POST['cryptopass'], false),
+                   'cryptoalgo' => clean($_POST['cryptoalgo'], false),
                   );
 
             array_push($config['snmp']['v3'], $v3);
@@ -92,12 +91,12 @@ if ($hostname !== false) {
         }
     } else {
         print_error("You don't have the necessary privileges to add hosts.");
-    }//end if
-    echo '    </div>
-            <div class="col-sm-3">
-            </div>
-        </div>';
-}//end if
+    }
+}
+echo '    </div>
+        <div class="col-sm-3">
+        </div>
+    </div>';
 
 $pagetitle[] = 'Add host';
 
@@ -111,19 +110,25 @@ $pagetitle[] = 'Add host';
   <div><h2>Add Device</h2></div>
   <div class="alert alert-info">Devices will be checked for Ping/SNMP reachability before being probed.</div>
   <div class="well well-lg">
-    <div class='form-group'>
+      <div class="form-group">
+          <label for="hostname" class="col-sm-3 control-label">Hostname</label>
+          <div class="col-sm-9">
+              <input type="text" id="hostname" name="hostname" class="form-control input-sm" placeholder="Hostname">
+          </div>
+      </div>
+      <div class='form-group'>
         <label for='hardware' class='col-sm-3 control-label'>SNMP</label>
         <div class='col-sm-4'>
             <input type="checkbox" id="snmp" name="snmp" data-size="small" onChange="disableSnmp(this);" checked>
         </div>
     </div>
-    <div class="form-group">
-      <label for="hostname" class="col-sm-3 control-label">Hostname</label>
-      <div class="col-sm-9">
-        <input type="text" id="hostname" name="hostname" class="form-control input-sm" placeholder="Hostname">
-      </div>
-    </div>
     <div id='snmp_override' style="display: none;">
+        <div class='form-group'>
+            <label for='sysName' class='col-sm-3 control-label'>sysName (optional)</label>
+            <div class='col-sm-9'>
+                <input id='sysName' class='form-control' name='sysName' placeholder="sysName (optional)"/>
+            </div>
+        </div>
         <div class='form-group'>
             <label for='hardware' class='col-sm-3 control-label'>Hardware (optional)</label>
             <div class='col-sm-9'>
@@ -217,13 +222,13 @@ foreach (get_port_assoc_modes() as $mode) {
           <div class="form-group">
             <label for="authname" class="col-sm-3 control-label">Auth User Name</label>
             <div class="col-sm-9">
-              <input type="text" name="authname" id="authname" class="form-control input-sm">
+              <input type="text" name="authname" id="authname" class="form-control input-sm" autocomplete="off">
             </div>
           </div>
           <div class="form-group">
             <label for="authpass" class="col-sm-3 control-label">Auth Password</label>
             <div class="col-sm-9">
-              <input type="text" name="authpass" id="authpass" placeholder="AuthPass" class="form-control input-sm">
+              <input type="text" name="authpass" id="authpass" placeholder="AuthPass" class="form-control input-sm" autocomplete="off">
             </div>
           </div>
           <div class="form-group">
@@ -238,7 +243,7 @@ foreach (get_port_assoc_modes() as $mode) {
           <div class="form-group">
             <label for="cryptopass" class="col-sm-3 control-label">Crypto Password</label>
             <div class="col-sm-9">
-              <input type="text" name="cryptopass" id="cryptopass" placeholder="Crypto Password" class="form-control input-sm">
+              <input type="text" name="cryptopass" id="cryptopass" placeholder="Crypto Password" class="form-control input-sm" autocomplete="off">
             </div>
           </div>
           <div class="form-group">
@@ -357,7 +362,7 @@ if ($config['distributed_poller'] === true) {
 
     $("[name='snmp']").bootstrapSwitch('offColor','danger');
 <?php
-if ($hostname !== false && !$snmp_enabled) {
+if (!$snmp_enabled) {
     echo '  $("[name=\'snmp\']").trigger(\'click\');';
 }
 ?>

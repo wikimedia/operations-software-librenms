@@ -25,26 +25,17 @@
  * @subpackage Alerts
  */
 
-$init_modules = array('alerts');
+use LibreNMS\Util\FileLock;
+
+$init_modules = ['alerts', 'laravel'];
 require __DIR__ . '/includes/init.php';
 
 $options = getopt('d::');
 
-$alerts_lock = \LibreNMS\FileLock::lockOrDie('alerts');
+$alerts_lock = FileLock::lockOrDie('alerts');
 
-if (isset($options['d'])) {
+if (set_debug(isset($options['d']))) {
     echo "DEBUG!\n";
-    $debug = true;
-    ini_set('display_errors', 1);
-    ini_set('display_startup_errors', 1);
-    ini_set('log_errors', 1);
-    ini_set('error_reporting', 1);
-} else {
-    $debug = false;
-    // ini_set('display_errors', 0);
-    ini_set('display_startup_errors', 0);
-    ini_set('log_errors', 0);
-    // ini_set('error_reporting', 0);
 }
 
 if (!defined('TEST') && $config['alert']['disable'] != 'true') {

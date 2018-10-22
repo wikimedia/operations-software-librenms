@@ -1,6 +1,8 @@
 <?php
 
 
+use LibreNMS\Util\Rewrite;
+
 function rewrite_location($location)
 {
     // FIXME -- also check the database for rewrites?
@@ -58,6 +60,7 @@ function rewrite_entity_descr($descr)
     $descr = str_replace('Power Supply Module', 'PSU ', $descr);
     $descr = str_replace('/Voltage Sensor/', 'Voltage', $descr);
     $descr = str_replace('Sensor', '', $descr);
+    $descr = str_replace('PMOD', 'PSU', $descr);
     $descr = preg_replace('/^temperatures /', '', $descr);
     $descr = preg_replace('/^voltages /', '', $descr);
 
@@ -299,12 +302,29 @@ function rewrite_fortinet_hardware($hardware)
         '.1.3.6.1.4.1.12356.101.1.800'   => 'FortiGate 80C',
         '.1.3.6.1.4.1.12356.1688'        => 'FortiMail 2000A',
         '.1.3.6.1.4.1.12356.103.1.1000'  => 'FortiManager 100',
-        '.1.3.6.1.4.1.12356.103.1.20000' => 'FortiManager 2000XL',
+        '.1.3.6.1.4.1.12356.103.1.1001'  => 'FortiManager VM',
+        '.1.3.6.1.4.1.12356.103.1.1003'  => 'FortiManager 100C',
+        '.1.3.6.1.4.1.12356.103.1.2004'  => 'FortiManager 200D',
+        '.1.3.6.1.4.1.12356.103.1.2005'  => 'FortiManager 200E',
         '.1.3.6.1.4.1.12356.103.1.3004'  => 'FortiManager 300D',
-        '.1.3.6.1.4.1.12356.103.1.30000' => 'FortiManager 3000',
-        '.1.3.6.1.4.1.12356.103.1.30002' => 'FortiManager 3000B',
+        '.1.3.6.1.4.1.12356.103.1.3005'  => 'FortiManager 300E',
         '.1.3.6.1.4.1.12356.103.1.4000'  => 'FortiManager 400',
         '.1.3.6.1.4.1.12356.103.1.4001'  => 'FortiManager 400A',
+        '.1.3.6.1.4.1.12356.103.1.4002'  => 'FortiManager 400B',
+        '.1.3.6.1.4.1.12356.103.1.4003'  => 'FortiManager 400C',
+        '.1.3.6.1.4.1.12356.103.1.4005'  => 'FortiManager 400E',
+        '.1.3.6.1.4.1.12356.103.1.10003'  => 'FortiManager 1000C',
+        '.1.3.6.1.4.1.12356.103.1.10004'  => 'FortiManager 1000D',
+        '.1.3.6.1.4.1.12356.103.1.20005'  => 'FortiManager 2000E',
+        '.1.3.6.1.4.1.12356.103.1.20000'  => 'FortiManager 2000XL',
+        '.1.3.6.1.4.1.12356.103.1.30000'  => 'FortiManager 3000',
+        '.1.3.6.1.4.1.12356.103.1.30002'  => 'FortiManager 3000B',
+        '.1.3.6.1.4.1.12356.103.1.30003'  => 'FortiManager 3000C',
+        '.1.3.6.1.4.1.12356.103.1.30006'  => 'FortiManager 3000F',
+        '.1.3.6.1.4.1.12356.103.1.39005'  => 'FortiManager 3900E',
+        '.1.3.6.1.4.1.12356.103.1.40004'  => 'FortiManager 4000D',
+        '.1.3.6.1.4.1.12356.103.1.40005'  => 'FortiManager 4000E',
+        '.1.3.6.1.4.1.12356.103.1.50011'  => 'FortiManager 5001A',
         '.1.3.6.1.4.1.12356.106.1.50030' => 'FortiSwitch 5003A',
         '.1.3.6.1.4.1.12356.101.1.510'   => 'FortiWiFi 50B',
         '.1.3.6.1.4.1.12356.101.1.610'   => 'FortiWiFi 60',
@@ -323,77 +343,81 @@ function rewrite_fortinet_hardware($hardware)
 function rewrite_extreme_hardware($hardware)
 {
     $rewrite_extreme_hardware = array(
-        '.1.3.6.1.4.1.1916.2.26'  => 'Alpine 3802',
-        '.1.3.6.1.4.1.1916.2.20'  => 'Alpine 3804',
-        '.1.3.6.1.4.1.1916.2.17'  => 'Alpine 3808',
-        '.1.3.6.1.4.1.1916.2.86'  => 'Altitude 300',
-        '.1.3.6.1.4.1.1916.2.75'  => 'Altitude 350',
-        '.1.3.6.1.4.1.1916.2.56'  => 'BlackDiamond 10808',
-        '.1.3.6.1.4.1.1916.2.85'  => 'BlackDiamond 12802',
-        '.1.3.6.1.4.1.1916.2.77'  => 'BlackDiamond 12804',
-        '.1.3.6.1.4.1.1916.2.8'   => 'BlackDiamond 6800',
-        '.1.3.6.1.4.1.1916.2.27'  => 'BlackDiamond 6804',
-        '.1.3.6.1.4.1.1916.2.11'  => 'BlackDiamond 6808',
-        '.1.3.6.1.4.1.1916.2.24'  => 'BlackDiamond 6816',
-        '.1.3.6.1.4.1.1916.2.74'  => 'BlackDiamond 8806',
-        '.1.3.6.1.4.1.1916.2.62'  => 'BlackDiamond 8810',
-        '.1.3.6.1.4.1.1916.2.23'  => 'EnetSwitch 24Port',
-        '.1.3.6.1.4.1.1916.2.83'  => 'Sentriant CE150',
-        '.1.3.6.1.4.1.1916.2.58'  => 'Summit 400-48t',
-        '.1.3.6.1.4.1.1916.2.71'  => 'Summit X450a-24t',
-        '.1.3.6.1.4.1.1916.2.81'  => 'Summit X450a-24t',
         '.1.3.6.1.4.1.1916.2.1'   => 'Summit 1',
-        '.1.3.6.1.4.1.1916.2.19'  => 'Summit 1iSX',
-        '.1.3.6.1.4.1.1916.2.14'  => 'Summit 1iTX',
         '.1.3.6.1.4.1.1916.2.2'   => 'Summit 2',
-        '.1.3.6.1.4.1.1916.2.53'  => 'Summit 200-24',
-        '.1.3.6.1.4.1.1916.2.70'  => 'Summit 200-24fx',
-        '.1.3.6.1.4.1.1916.2.54'  => 'Summit 200-48',
-        '.1.3.6.1.4.1.1916.2.7'   => 'Summit 24',
-        '.1.3.6.1.4.1.1916.2.41'  => 'Summit 24e2SX',
-        '.1.3.6.1.4.1.1916.2.40'  => 'Summit 24e2TX',
-        '.1.3.6.1.4.1.1916.2.25'  => 'Summit 24e3',
         '.1.3.6.1.4.1.1916.2.3'   => 'Summit 3',
-        '.1.3.6.1.4.1.1916.2.61'  => 'Summit 300-24',
-        '.1.3.6.1.4.1.1916.2.55'  => 'Summit 300-48',
         '.1.3.6.1.4.1.1916.2.4'   => 'Summit 4',
-        '.1.3.6.1.4.1.1916.2.64'  => 'Summit 400-24p',
-        '.1.3.6.1.4.1.1916.2.63'  => 'Summit 400-24t',
-        '.1.3.6.1.4.1.1916.2.59'  => 'Summit 400-24x',
-        '.1.3.6.1.4.1.1916.2.6'   => 'Summit 48',
-        '.1.3.6.1.4.1.1916.2.16'  => 'Summit 48i',
-        '.1.3.6.1.4.1.1916.2.28'  => 'Summit 48i1u',
         '.1.3.6.1.4.1.1916.2.5'   => 'Summit 4FX',
-        '.1.3.6.1.4.1.1916.2.15'  => 'Summit 5i',
-        '.1.3.6.1.4.1.1916.2.21'  => 'Summit 5iLX',
-        '.1.3.6.1.4.1.1916.2.22'  => 'Summit 5iTX',
+        '.1.3.6.1.4.1.1916.2.6'   => 'Summit 48',
+        '.1.3.6.1.4.1.1916.2.7'   => 'Summit 24',
+        '.1.3.6.1.4.1.1916.2.8'   => 'BlackDiamond 6800',
+        '.1.3.6.1.4.1.1916.2.11'  => 'BlackDiamond 6808',
         '.1.3.6.1.4.1.1916.2.12'  => 'Summit 7iSX',
         '.1.3.6.1.4.1.1916.2.13'  => 'Summit 7iTX',
+        '.1.3.6.1.4.1.1916.2.14'  => 'Summit 1iTX',
+        '.1.3.6.1.4.1.1916.2.15'  => 'Summit 5i',
+        '.1.3.6.1.4.1.1916.2.16'  => 'Summit 48i',
+        '.1.3.6.1.4.1.1916.2.17'  => 'Alpine 3808',
+        '.1.3.6.1.4.1.1916.2.19'  => 'Summit 1iSX',
+        '.1.3.6.1.4.1.1916.2.20'  => 'Alpine 3804',
+        '.1.3.6.1.4.1.1916.2.21'  => 'Summit 5iLX',
+        '.1.3.6.1.4.1.1916.2.22'  => 'Summit 5iTX',
+        '.1.3.6.1.4.1.1916.2.23'  => 'EnetSwitch 24Port',
+        '.1.3.6.1.4.1.1916.2.24'  => 'BlackDiamond 6816',
+        '.1.3.6.1.4.1.1916.2.25'  => 'Summit 24e3',
+        '.1.3.6.1.4.1.1916.2.26'  => 'Alpine 3802',
+        '.1.3.6.1.4.1.1916.2.27'  => 'BlackDiamond 6804',
+        '.1.3.6.1.4.1.1916.2.28'  => 'Summit 48i1u',
         '.1.3.6.1.4.1.1916.2.30'  => 'Summit Px1',
+        '.1.3.6.1.4.1.1916.2.40'  => 'Summit 24e2TX',
+        '.1.3.6.1.4.1.1916.2.41'  => 'Summit 24e2SX',
+        '.1.3.6.1.4.1.1916.2.53'  => 'Summit 200-24',
+        '.1.3.6.1.4.1.1916.2.54'  => 'Summit 200-48',
+        '.1.3.6.1.4.1.1916.2.55'  => 'Summit 300-48',
+        '.1.3.6.1.4.1.1916.2.56'  => 'BlackDiamond 10808',
+        '.1.3.6.1.4.1.1916.2.58'  => 'Summit 400-48t',
+        '.1.3.6.1.4.1.1916.2.59'  => 'Summit 400-24x',
+        '.1.3.6.1.4.1.1916.2.61'  => 'Summit 300-24',
+        '.1.3.6.1.4.1.1916.2.62'  => 'BlackDiamond 8810',
+        '.1.3.6.1.4.1.1916.2.63'  => 'Summit 400-24t',
+        '.1.3.6.1.4.1.1916.2.64'  => 'Summit 400-24p',
+        '.1.3.6.1.4.1.1916.2.65'  => 'Summit X450-24x',
+        '.1.3.6.1.4.1.1916.2.66'  => 'Summit X450-24t',
         '.1.3.6.1.4.1.1916.2.67'  => 'SummitStack',
-        '.1.3.6.1.4.1.1916.2.93'  => 'Summit Ver2Stack',
         '.1.3.6.1.4.1.1916.2.68'  => 'SummitWM 100',
         '.1.3.6.1.4.1.1916.2.69'  => 'SummitWM 1000',
+        '.1.3.6.1.4.1.1916.2.70'  => 'Summit 200-24fx',
+        '.1.3.6.1.4.1.1916.2.71'  => 'Summit X450a-24t',
+        '.1.3.6.1.4.1.1916.2.72'  => 'Summit X450e-24p',
+        '.1.3.6.1.4.1.1916.2.74'  => 'BlackDiamond 8806',
+        '.1.3.6.1.4.1.1916.2.75'  => 'Altitude 350',
+        '.1.3.6.1.4.1.1916.2.76'  => 'Summit X450a-48t',
+        '.1.3.6.1.4.1.1916.2.77'  => 'BlackDiamond 12804',
+        '.1.3.6.1.4.1.1916.2.79'  => 'Summit X450e-48p',
+        '.1.3.6.1.4.1.1916.2.80'  => 'Summit X450a-24tDC',
+        '.1.3.6.1.4.1.1916.2.81'  => 'Summit X450a-24t',
+        '.1.3.6.1.4.1.1916.2.82'  => 'Summit X450a-24xDC',
+        '.1.3.6.1.4.1.1916.2.83'  => 'Sentriant CE150',
+        '.1.3.6.1.4.1.1916.2.84'  => 'Summit X450a-24x',
+        '.1.3.6.1.4.1.1916.2.85'  => 'BlackDiamond 12802',
+        '.1.3.6.1.4.1.1916.2.86'  => 'Altitude 300',
+        '.1.3.6.1.4.1.1916.2.87'  => 'Summit X450a-48tDC',
+        '.1.3.6.1.4.1.1916.2.88'  => 'Summit X250-24t',
+        '.1.3.6.1.4.1.1916.2.89'  => 'Summit X250-24p',
+        '.1.3.6.1.4.1.1916.2.90'  => 'Summit X250-24x',
+        '.1.3.6.1.4.1.1916.2.91'  => 'Summit X250-48t',
+        '.1.3.6.1.4.1.1916.2.92'  => 'Summit X250-48p',
+        '.1.3.6.1.4.1.1916.2.93'  => 'Summit Ver2Stack',
         '.1.3.6.1.4.1.1916.2.94'  => 'SummitWM 200',
         '.1.3.6.1.4.1.1916.2.95'  => 'SummitWM 2000',
-        '.1.3.6.1.4.1.1916.2.89'  => 'Summit X250-24p',
-        '.1.3.6.1.4.1.1916.2.88'  => 'Summit X250-24t',
-        '.1.3.6.1.4.1.1916.2.90'  => 'Summit X250-24x',
-        '.1.3.6.1.4.1.1916.2.92'  => 'Summit X250-48p',
-        '.1.3.6.1.4.1.1916.2.91'  => 'Summit X250-48t',
-        '.1.3.6.1.4.1.1916.2.66'  => 'Summit X450-24t',
-        '.1.3.6.1.4.1.1916.2.65'  => 'Summit X450-24x',
-        '.1.3.6.1.4.1.1916.2.80'  => 'Summit X450a-24tDC',
-        '.1.3.6.1.4.1.1916.2.84'  => 'Summit X450a-24x',
-        '.1.3.6.1.4.1.1916.2.82'  => 'Summit X450a-24xDC',
-        '.1.3.6.1.4.1.1916.2.76'  => 'Summit X450a-48t',
-        '.1.3.6.1.4.1.1916.2.87'  => 'Summit X450a-48tDC',
-        '.1.3.6.1.4.1.1916.2.72'  => 'Summit X450e-24p',
-        '.1.3.6.1.4.1.1916.2.79'  => 'Summit X450e-48p',
         '.1.3.6.1.4.1.1916.2.100' => 'Summit x150-24t',
         '.1.3.6.1.4.1.1916.2.114' => 'Summit x650-24x',
+        '.1.3.6.1.4.1.1916.2.118' => 'Summit X650-24x(SSns)',
+        '.1.3.6.1.4.1.1916.2.120' => 'Summit x650-24x(SS)',
         '.1.3.6.1.4.1.1916.2.129' => 'NWI-e450a',
         '.1.3.6.1.4.1.1916.2.133' => 'Summit x480-48t',
+        '.1.3.6.1.4.1.1916.2.137' => 'Summit X480-24x',
+        '.1.3.6.1.4.1.1916.2.139' => 'Summit X480-24x(10G4X)',
         '.1.3.6.1.4.1.1916.2.141' => 'Summit x480-48x',
         '.1.3.6.1.4.1.1916.2.167' => 'Summit x670-48x',
         '.1.3.6.1.4.1.1916.2.168' => 'Summit x670v-48x',
@@ -837,6 +861,27 @@ function rewrite_ironware_hardware($hardware)
         'snCer2048FX'                            => 'NetIron CER 2048F + 2x10G',
         'snCer2048CX'                            => 'NetIron CER 2048C + 2x10G',
         'snTI2X24Router'                         => 'Stackable TurboIron-X24',
+        'snBrocadeMLXe4Router'                   => 'NetIron MLXe-4',
+        'snBrocadeMLXe8Router'                   => 'NetIron MLXe-8',
+        'snBrocadeMLXe16Router'                  => 'NetIron MLXe-16',
+        'snBrocadeMLXe32Router'                  => 'NetIron MLXe-32',
+        'snICX643024Switch'                      => 'Brocade ICX 6430 24-port Switch',
+        'snICX643048Switch'                      => 'Brocade ICX 6430 48-port Switch',
+        'snICX645024Switch'                      => 'Brocade ICX 6450 24-port Switch',
+        'snICX645048Switch'                      => 'Brocade ICX 6450 48-port Switch',
+        'snICX661024Switch'                      => 'Brocade ICX 6610 24-port Switch',
+        'snICX661048Switch'                      => 'Brocade ICX 6610 48-port Switch',
+        'snICX665064Switch'                      => 'Brocade ICX 6650 64-port Switch',
+        'snICX725024Switch'                      => 'Brocade ICX 7250 24-port Switch',
+        'snICX725048Switch'                      => 'Brocade ICX 7250 48-port Switch',
+        'snICX745024Switch'                      => 'Brocade ICX 7450 24-port Switch',
+        'snICX745048Switch'                      => 'Brocade ICX 7450 48-port Switch',
+        'snFastIronStackICX6430Switch'           => 'Brocade ICX 6430 Switch stack',
+        'snFastIronStackICX6450Switch'           => 'Brocade ICX 6450 Switch stack',
+        'snFastIronStackICX6610Switch'           => 'Brocade ICX 6610 Switch stack',
+        'snFastIronStackICX7250Switch'           => 'Brocade ICX 7250 Switch stack',
+        'snFastIronStackICX7450Switch'           => 'Brocade ICX 7450 Switch stack',
+        'snFastIronStackICX7750Switch'           => 'Brocade ICX 7750 Switch stack',
     );
 
     $hardware = array_str_replace($rewrite_ironware_hardware, $hardware);
@@ -939,6 +984,8 @@ function rewrite_junos_hardware($hardware)
         'jnxProductNameMX80'           => 'MX80',
         'jnxProductName'               => '',
         'jnxProductQFX510048S6Q'       => 'QFX5100-48S6Q',
+        'jnxProductQFX511048S4C'       => 'QFX5110-48S4C',
+        'jnxProductQFX510096S8Q'       => 'QFX5100-96S8Q',
     );
 
 
@@ -959,59 +1006,13 @@ function rewrite_generic_hardware($hardware)
 
 function fixiftype($type)
 {
-    $rewrite_iftype = array(
-        '/^frameRelay$/'             => 'Frame Relay',
-        '/^ethernetCsmacd$/'         => 'Ethernet',
-        '/^softwareLoopback$/'       => 'Loopback',
-        '/^tunnel$/'                 => 'Tunnel',
-        '/^propVirtual$/'            => 'Virtual Int',
-        '/^ppp$/'                    => 'PPP',
-        '/^ds1$/'                    => 'DS1',
-        '/^pos$/'                    => 'POS',
-        '/^sonet$/'                  => 'SONET',
-        '/^slip$/'                   => 'SLIP',
-        '/^mpls$/'                   => 'MPLS Layer',
-        '/^l2vlan$/'                 => 'VLAN Subif',
-        '/^atm$/'                    => 'ATM',
-        '/^aal5$/'                   => 'ATM AAL5',
-        '/^atmSubInterface$/'        => 'ATM Subif',
-        '/^propPointToPointSerial$/' => 'PtP Serial',
-    );
-
-    $type = array_preg_replace($rewrite_iftype, $type);
-
-    return ($type);
+    return Rewrite::normalizeIfType($type);
 }
 
 
 function fixifName($inf)
 {
-    $rewrite_ifname = array(
-        'ether'                                          => 'Ether',
-        'gig'                                            => 'Gig',
-        'fast'                                           => 'Fast',
-        'ten'                                            => 'Ten',
-        '-802.1q vlan subif'                             => '',
-        '-802.1q'                                        => '',
-        'bvi'                                            => 'BVI',
-        'vlan'                                           => 'Vlan',
-        'tunnel'                                         => 'Tunnel',
-        'serial'                                         => 'Serial',
-        '-aal5 layer'                                    => ' aal5',
-        'null'                                           => 'Null',
-        'atm'                                            => 'ATM',
-        'port-channel'                                   => 'Port-Channel',
-        'dial'                                           => 'Dial',
-        'hp procurve switch software loopback interface' => 'Loopback Interface',
-        'control plane interface'                        => 'Control Plane',
-        'loop'                                           => 'Loop',
-        'bundle-ether'                                   => 'Bundle-Ether',
-    );
-
-    $inf = strtolower($inf);
-    $inf = array_str_replace($rewrite_ifname, $inf);
-
-    return $inf;
+    return Rewrite::normalizeIfName($inf);
 }
 
 
@@ -1294,6 +1295,12 @@ function rewrite_brocade_fc_switches($descr)
         case "148":
             $hardware = "Brocade 7840 Switch";
             break;
+        case "162":
+            $hardware = "Brocade G620 Switch";
+            break;
+        case "170":
+            $hardware = "Brocade G610 Switch";
+            break;
         default:
             $hardware = "Unknown Brocade FC Switch";
     }
@@ -1431,4 +1438,96 @@ function return_number($value)
         $value = $temp_response[0];
     }
     return $value;
+}
+
+function get_units_from_sensor($sensor)
+{
+    switch ($sensor['sensor_class']) {
+        case 'airflow':
+            return 'cfm';
+        case 'current':
+            return 'A';
+        case 'dbm':
+        case 'signal':
+            return 'dBm';
+        case 'fanspeed':
+            return 'rpm';
+        case 'frequency':
+            return 'Hz';
+        case 'charge':
+        case 'humidity':
+        case 'load':
+            return '%';
+        case 'cooling':
+        case 'power':
+            return 'W';
+        case 'pressure':
+            return 'kPa';
+        case 'runtime':
+            return 'Min';
+        case 'snr':
+            return 'SNR';
+        case 'state':
+            return '#';
+        case 'temperature':
+            return 'C';
+        case 'voltage':
+            return 'V';
+        default:
+            return '';
+    }
+}
+
+function parse_entity_state($state, $value)
+{
+    $data = array(
+        'entStateOper' => array(
+            1 => array('text' => 'unavailable', 'color' => 'default'),
+            2 => array('text' => 'disabled', 'color' => 'danger'),
+            3 => array('text' => 'enabled', 'color' => 'success'),
+            4 => array('text' => 'testing', 'color' => 'warning'),
+        ),
+        'entStateUsage' => array(
+            1 => array('text' => 'unavailable', 'color' => 'default'),
+            2 => array('text' => 'idle', 'color' => 'info'),
+            3 => array('text' => 'active', 'color' => 'success'),
+            4 => array('text' => 'busy', 'color' => 'success'),
+        ),
+        'entStateStandby' => array(
+            1 => array('text' => 'unavailable', 'color' => 'default'),
+            2 => array('text' => 'hotStandby', 'color' => 'info'),
+            3 => array('text' => 'coldStandby', 'color' => 'info'),
+            4 => array('text' => 'providingService', 'color' => 'success'),
+        ),
+        'entStateAdmin' => array(
+            1 => array('text' => 'unknown', 'color' => 'default'),
+            2 => array('text' => 'locked', 'color' => 'info'),
+            3 => array('text' => 'shuttingDown', 'color' => 'warning'),
+            4 => array('text' => 'unlocked', 'color' => 'success'),
+        ),
+    );
+
+    if (isset($data[$state][$value])) {
+        return $data[$state][$value];
+    }
+
+    return array('text'=>'na', 'color'=>'default');
+}
+
+function parse_entity_state_alarm($bits)
+{
+    // not sure if this is correct
+    $data = array(
+        0 => array('text' => 'unavailable', 'color' => 'default'),
+        1 => array('text' => 'underRepair', 'color' => 'warning'),
+        2 => array('text' => 'critical', 'color' => 'danger'),
+        3 => array('text' => 'major', 'color' => 'danger'),
+        4 => array('text' => 'minor', 'color' => 'info'),
+        5 => array('text' => 'warning', 'color' => 'warning'),
+        6 => array('text' => 'indeterminate', 'color' => 'default'),
+    );
+
+    $alarms = str_split(base_convert($bits, 16, 2));
+    $active_alarms = array_filter($alarms);
+    return array_intersect_key($data, $active_alarms);
 }

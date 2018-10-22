@@ -1,4 +1,6 @@
 <?php
+use LibreNMS\Authentication\LegacyAuth;
+
 session_start();
 if (empty($_POST) && !empty($_SESSION) && !isset($_REQUEST['stage'])) {
     $_POST = $_SESSION;
@@ -22,32 +24,22 @@ if (file_exists('../config.php') && $stage != 6) {
 
 // do not use the DB in init, we'll bring it up ourselves
 $init_modules = array('web', 'nodb');
-if ($stage > 3) {
-    $init_modules[] = 'auth';
-}
 require realpath(__DIR__ . '/..') . '/includes/init.php';
 
 // List of php modules we expect to see
-$modules = array('gd','mysqli','mcrypt');
+$modules = array('gd','mysqlnd');
 
 $dbhost = @$_POST['dbhost'] ?: 'localhost';
 $dbuser = @$_POST['dbuser'] ?: 'librenms';
 $dbpass = @$_POST['dbpass'] ?: '';
 $dbname = @$_POST['dbname'] ?: 'librenms';
 $dbport = @$_POST['dbport'] ?: 3306;
-$dbsocket = @$_POST['dbsocket'] ?: '';
-$config['db_host']=$dbhost;
-$config['db_user']=$dbuser;
-$config['db_pass']=$dbpass;
-$config['db_name']=$dbname;
-$config['db_port']=$dbport;
-$config['db_socket']=$dbsocket;
-
-if (!empty($config['db_socket'])) {
-    $config['db_host'] = 'localhost';
-    $config['db_port'] = null;
+if (empty($_POST['dbsocket'])) {
+    $dbsocket = null;
 } else {
-    $config['db_socket'] = null;
+    $dbhost = 'localhost';
+    $dbsocket = $_POST['dbsocket'];
+    $dbport = null;
 }
 
 $add_user = @$_POST['add_user'] ?: '';
@@ -59,7 +51,11 @@ $add_email = @$_POST['add_email'] ?: '';
 if ($stage > 1) {
     try {
         if ($stage != 6) {
-            dbConnect();
+            dbConnect($dbhost, $dbuser, $dbpass, $dbname, $dbport, $dbsocket);
+            if (dbIsConnected() === false) {
+                $msg = "We could not connect to your database, please check the details and try again";
+                $stage = 1;
+            }
         }
         if ($stage == 2 && $_SESSION['build-ok'] == true) {
             $stage = 3;
@@ -201,11 +197,13 @@ if (is_writable(session_save_path() === '' ? '/tmp' : session_save_path())) {
 echo "<tr class='$row_class'><td>Session directory writable</td><td>$status</td><td>";
 if ($status == 'no') {
     echo session_save_path() . " is not writable";
-    $group_info = posix_getgrgid(filegroup(session_save_path()));
-    if ($group_info['gid'] !== 0) {  // don't suggest adding users to the root group
-        $group = $group_info['name'];
-        $user = get_current_user();
-        echo ", suggested fix <strong>usermod -a -G $group $user</strong>";
+    if (function_exists('posix_getgrgid')) {
+        $group_info = posix_getgrgid(filegroup(session_save_path()));
+        if ($group_info['gid'] !== 0) {  // don't suggest adding users to the root group
+            $group = $group_info['name'];
+            $user = get_current_user();
+            echo ", suggested fix <strong>usermod -a -G $group $user</strong>";
+        }
     }
 }
 echo "</td></tr>";
@@ -217,9 +215,12 @@ echo "</td></tr>";
       <div class="col-md-6 col-md-offset-3">
         <form class="form-inline" role="form" method="post">
           <input type="hidden" name="stage" value="1">
-          <button type="submit" class="btn btn-success pull-right" <?php if (!$complete) {
+          <button type="submit" class="btn btn-success pull-right"
+            <?php
+            if (!$complete) {
                 echo "disabled='disabled'";
-} ?>>Next Stage</button>
+            }
+            ?>>Next Stage</button>
         </form>
       </div>
     </div>
@@ -359,11 +360,6 @@ $config_file = <<<"EOD"
 //Please ensure this user is created and has the correct permissions to your install
 \$config['user'] = 'librenms';
 
-### Memcached config - We use this to store realtime usage
-\$config\['memcached'\]\['enable'\]  = FALSE;
-\$config\['memcached'\]\['host'\]    = "localhost";
-\$config\['memcached'\]\['port'\]    = 11211;
-
 ### Locations - it is recommended to keep the default
 #\$config\['install_dir'\]  = "$install_dir";
 
@@ -387,8 +383,9 @@ $config_file = <<<"EOD"
 #\$config\['nets'\]\[\] = "172.16.0.0/12";
 #\$config\['nets'\]\[\] = "192.168.0.0/16";
 
-# Uncomment the next line to disable daily updates
-#\$config\['update'\] = 0;
+# Update configuration
+#\$config\['update_channel'\] = 'release';  # uncomment to follow the monthly release channel
+#\$config\['update'\] = 0;  # uncomment to completely disable updates
 EOD;
 
 if (!file_exists("../config.php")) {
@@ -471,9 +468,9 @@ if (!file_exists("../config.php")) {
       </div>
       <div class="col-md-6">
 <?php
-if (auth_usermanagement()) {
-    if (!user_exists($add_user)) {
-        if (adduser($add_user, $add_pass, '10', $add_email)) {
+if (LegacyAuth::get()->canManageUsers()) {
+    if (!LegacyAuth::get()->userExists($add_user)) {
+        if (LegacyAuth::get()->addUser($add_user, $add_pass, '10', $add_email)) {
             echo("<div class='alert alert-success'>User has been added successfully</div>");
             $proceed = 0;
         } else {
@@ -494,9 +491,12 @@ if (auth_usermanagement()) {
           <input type="hidden" name="dbpass" value="<?php echo $dbpass; ?>">
           <input type="hidden" name="dbname" value="<?php echo $dbname; ?>">
           <input type="hidden" name="dbsocket" value="<?php echo $dbsocket; ?>">
-          <button type="submit" class="btn btn-success pull-right" <?php if ($proceed == "1") {
+          <button type="submit" class="btn btn-success pull-right"
+            <?php
+            if ($proceed == "1") {
                 echo "disabled='disabled'";
-} ?>>Generate Config</button>
+            }
+            ?>>Generate Config</button>
         </form>
       </div>
       <div class="col-md-3">

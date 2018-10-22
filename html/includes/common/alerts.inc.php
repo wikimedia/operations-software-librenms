@@ -1,6 +1,19 @@
 <?php
+/*
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.  Please see LICENSE.txt at the top level of
+ * the source code distribution for details.
+ *
+ * @package    LibreNMS
+ * @subpackage graphs
+ * @link       http://librenms.org
+ * @copyright  2017 LibreNMS
+ * @author     LibreNMS Contributors
+*/
 
-require_once $config['install_dir'].'/includes/device-groups.inc.php';
+require_once $config['install_dir'] . '/includes/device-groups.inc.php';
 
 /* FIXME: is there a central place we can put this? */
 
@@ -26,10 +39,12 @@ $alert_severities = array(
 //if( defined('SHOW_SETTINGS') || empty($widget_settings) ) {
 if (defined('SHOW_SETTINGS')) {
     $current_acknowledged = isset($widget_settings['acknowledged']) ? $widget_settings['acknowledged'] : '';
-    $current_severity     = isset($widget_settings['severity']) ? $widget_settings['severity'] : '';
-    $current_state        = isset($widget_settings['state']) ? $widget_settings['state'] : '';
-    $current_group        = isset($widget_settings['group']) ? $widget_settings['group'] : '';
-    $current_proc         = isset($widget_settings['proc']) ? $widget_settings['proc'] : '';
+    $current_fired =  isset($widget_settings['fired']) ? $widget_settings['fired'] : '';
+    $current_severity = isset($widget_settings['severity']) ? $widget_settings['severity'] : '';
+    $current_state = isset($widget_settings['state']) ? $widget_settings['state'] : '';
+    $current_group = isset($widget_settings['group']) ? $widget_settings['group'] : '';
+    $current_proc = isset($widget_settings['proc']) ? $widget_settings['proc'] : '';
+    $current_sorting = isset($widget_settings['sort']) ? $widget_settings['sort'] : '';
 
     $common_output[] = '
 <form class="form" onsubmit="widget_settings(this); return false;">
@@ -40,9 +55,23 @@ if (defined('SHOW_SETTINGS')) {
     <div class="col-sm-8">
       <select class="form-control" name="acknowledged">';
 
-    $common_output[] = '<option value=""'.($current_acknowledged == '' ? ' selected' : ' ').'>not filtered</option>';
-    $common_output[] = '<option value="1"'.($current_acknowledged == '1' ? ' selected' : ' ').'>show only acknowledged</option>';
-    $common_output[] = '<option value="0"'.($current_acknowledged == '0' ? ' selected' : ' ').'>hide acknowledged</option>';
+    $common_output[] = '<option value=""' . ($current_acknowledged == '' ? ' selected' : ' ') . '>not filtered</option>';
+    $common_output[] = '<option value="1"' . ($current_acknowledged == '1' ? ' selected' : ' ') . '>show only acknowledged</option>';
+    $common_output[] = '<option value="0"' . ($current_acknowledged == '0' ? ' selected' : ' ') . '>hide acknowledged</option>';
+
+    $common_output[] = '
+      </select>
+    </div>
+  </div>
+  <div class="form-group row">
+    <div class="col-sm-4">
+      <label for="fired" class="control-label">Show only Fired alerts: </label>
+    </div>
+    <div class="col-sm-8">
+      <select class="form-control" name="fired">';
+
+    $common_output[] = '<option value=""' . ($current_fired == '' ? ' selected' : ' ') . '>not filtered</option>';
+    $common_output[] = '<option value="1"' . ($current_fired == '1' ? ' selected' : ' ') . '>show only Fired alerts</option>';
 
     $common_output[] = '
       </select>
@@ -57,7 +86,7 @@ if (defined('SHOW_SETTINGS')) {
         <option value="">any severity</option>';
 
     foreach ($alert_severities as $name => $val) {
-        $common_output[] = "<option value=\"$val\"".($current_severity == $name || $current_severity == $val ? ' selected' : '').">$name".($val > 3 ? "" : " or higher")."</option>";
+        $common_output[] = "<option value=\"$val\"" . ($current_severity == $name || $current_severity == $val ? ' selected' : '') . ">$name" . ($val > 3 ? "" : " or higher") . "</option>";
     }
 
     $common_output[] = '
@@ -70,10 +99,10 @@ if (defined('SHOW_SETTINGS')) {
     </div>
     <div class="col-sm-8">
       <select class="form-control" name="state">';
-    $common_output[] = '<option value=""'.($current_state == '' ? ' selected' : '').'>any state</option>';
+    $common_output[] = '<option value=""' . ($current_state == '' ? ' selected' : '') . '>any state</option>';
 
     foreach ($alert_states as $name => $val) {
-        $common_output[] = "<option value=\"$val\"".($current_state == $name || (is_numeric($current_state) && $current_state == $val) ? ' selected' : '').">$name</option>";
+        $common_output[] = "<option value=\"$val\"" . ($current_state == $name || (is_numeric($current_state) && $current_state == $val) ? ' selected' : '') . ">$name</option>";
     }
 
     $common_output[] = '
@@ -86,13 +115,13 @@ if (defined('SHOW_SETTINGS')) {
     </div>
     <div class="col-sm-8">
       <select class="form-control" name="group">';
-    $common_output[] = '<option value=""'.($current_group == '' ? ' selected' : '').'>any group</option>';
+    $common_output[] = '<option value=""' . ($current_group == '' ? ' selected' : '') . '>any group</option>';
 
     $device_groups = GetDeviceGroups();
-    $common_output[] = "<!-- ".print_r($device_groups, true)." -->";
+    $common_output[] = "<!-- " . print_r($device_groups, true) . " -->";
     foreach ($device_groups as $group) {
         $group_id = $group['id'];
-        $common_output[] = "<option value=\"$group_id\"".(is_numeric($current_group) && $current_group == $group_id ? ' selected' : '').">".$group['name']." - ".$group['description']."</option>";
+        $common_output[] = "<option value=\"$group_id\"" . (is_numeric($current_group) && $current_group == $group_id ? ' selected' : '') . ">" . $group['name'] . " - " . $group['description'] . "</option>";
     }
     $common_output[] = '
       </select>
@@ -105,8 +134,23 @@ if (defined('SHOW_SETTINGS')) {
     <div class="col-sm-8">
       <select class="form-control" name="proc">';
 
-    $common_output[] = '<option value="1"'.($current_proc == '1' ? ' selected' : ' ').'>show</option>';
-    $common_output[] = '<option value="0"'.($current_proc == '0' ? ' selected' : ' ').'>hide</option>';
+    $common_output[] = '<option value="1"' . ($current_proc == '1' ? ' selected' : ' ') . '>show</option>';
+    $common_output[] = '<option value="0"' . ($current_proc == '0' ? ' selected' : ' ') . '>hide</option>';
+
+    $common_output[] = '
+      </select>
+    </div>
+  </div>
+  <div class="form-group row">
+    <div class="col-sm-4">
+      <label for="sort" class="control-label">Sort alerts by: </label>
+    </div>
+    <div class="col-sm-8">
+      <select class="form-control" name="sort">';
+    $common_output[] = '<option value=""' . ($current_sorting == '' ? ' selected' : '')
+                       . '>timestamp, descending</option>';
+    $common_output[] = '<option value="severity"' . ($current_sorting == 'severity' ? ' selected' : ' ')
+                       . '>severity, descending</option>';
 
     $common_output[] = '
       </select>
@@ -121,12 +165,14 @@ if (defined('SHOW_SETTINGS')) {
 </form>
 ';
 } else {
-    $device_id    = $device['device_id'];
+    $device_id = $device['device_id'];
     $acknowledged = $widget_settings['acknowledged'];
-    $state        = $widget_settings['state'];
+    $fired = $widget_settings['fired'];
+    $state = $widget_settings['state'];
     $min_severity = $widget_settings['min_severity'];
-    $group        = $widget_settings['group'];
-    $proc         = $widget_settings['proc'];
+    $group = $widget_settings['group'];
+    $proc = $widget_settings['proc'];
+    $sort = $widget_settings['sort'];
 
     $title = "Alerts";
 
@@ -146,10 +192,14 @@ if (defined('SHOW_SETTINGS')) {
         }
     }
 
+    if (is_numeric($fired)) {
+        $title = "Fired $title";
+    }
+
     if (is_numeric($group)) {
         $group_row = dbFetchRow("SELECT * FROM device_groups WHERE id = ?", array($group));
         if ($group_row) {
-            $title = "$title for ".$group_row['name'];
+            $title = "$title for " . $group_row['name'];
         }
     }
 
@@ -157,13 +207,17 @@ if (defined('SHOW_SETTINGS')) {
         $sev_name = $min_severity;
         if (is_numeric($min_severity)) {
             $sev_name = array_search($min_severity, $alert_severities);
-            $title = "$title ".($min_severity > 3 ? "" :">")."=$sev_name";
+            $title = "$title " . ($min_severity > 3 ? "" : ">") . "=$sev_name";
         }
+    }
+
+    if (!empty($sort)) {
+        $title = "$title " . "sorted by severity (higher first)";
     }
 
     $widget_settings['title'] = $title;
 
-    $group        = $widget_settings['group'];
+    $group = $widget_settings['group'];
 
     $common_output[] = '
 <div class="row">
@@ -172,30 +226,28 @@ if (defined('SHOW_SETTINGS')) {
     </div>
 </div>
 <div class="table-responsive">
-    <table id="alerts_'.$unique_id.'" class="table table-hover table-condensed alerts">
+    <table id="alerts_' . $unique_id . '" class="table table-hover table-condensed alerts">
         <thead>
             <tr>
-                <th data-column-id="status" data-formatter="status" data-sortable="false">Status</th>
-                <th data-column-id="rule">Rule</th>
-                <th data-column-id="details" data-sortable="false">&nbsp;</th>
-                <th data-column-id="hostname">Hostname</th>
+                <th data-column-id="severity"></th>
                 <th data-column-id="timestamp">Timestamp</th>
-                <th data-column-id="severity" data-formatter="severity">Severity</th>
-                <th data-column-id="ack" data-formatter="ack" data-sortable="false">Acknowledge</th>';
-    if (is_numeric($proc)) {
-        if ($proc) {
-            $common_output[] = '<th data-column-id="proc" data-formatter="proc" data-sortable="false">Procedure</th>';
-        }
-    } else {
-        $common_output[] = '<th data-column-id="proc" data-formatter="proc" data-sortable="false">Procedure</th>';
+                <th data-column-id="rule">Rule</th>
+                <th data-column-id="details" data-sortable="false"></th>
+                <th data-column-id="hostname">Hostname</th>
+                <th data-column-id="ack_ico" data-sortable="false">ACK</th>
+                <th data-column-id="notes" data-sortable="false">Notes</th>';
+
+    if ($proc == '1') {
+        $common_output[] = '<th data-column-id="proc" data-sortable="false">URL</th>';
     }
+
     $common_output[] = '
             </tr>
         </thead>
     </table>
 </div>
 <script>
-var alerts_grid = $("#alerts_'.$unique_id.'").bootgrid({
+var alerts_grid = $("#alerts_' . $unique_id . '").bootgrid({
     ajax: true,
     post: function ()
     {
@@ -204,48 +256,36 @@ var alerts_grid = $("#alerts_'.$unique_id.'").bootgrid({
 ';
 
     if (is_numeric($acknowledged)) {
-        $common_output[]="acknowledged: '$acknowledged',\n";
+        $common_output[] = "acknowledged: '$acknowledged',\n";
+    }
+    if (is_numeric($fired)) {
+        $common_output[] = "fired: '$fired',\n";
     }
     if (isset($state) && $state != '') {
-        $common_output[]="state: '$state',\n";
+        $common_output[] = "state: '$state',\n";
     }
     if (isset($min_severity) && $min_severity != '') {
-        $common_output[]="min_severity: '$min_severity',\n";
+        $common_output[] = "min_severity: '$min_severity',\n";
     }
 
     if (is_numeric($group)) {
-        $common_output[]="group: '$group',\n";
+        $common_output[] = "group: '$group',\n";
     }
     if (is_numeric($proc)) {
-        $common_output[]="proc: '$proc',\n";
+        $common_output[] = "proc: '$proc',\n";
     }
 
-    $common_output[]='
-            device_id: \'' . $device['device_id'] .'\'
+    if (isset($sort) && sort != '') {
+        $common_output[] = "sort: '$sort',\n";
+    }
+
+    $common_output[] = '
+            device_id: \'' . $device['device_id'] . '\'
         }
     },
     url: "ajax_table.php",
     rowCount: [50, 100, 250, -1],
-    formatters: {
-        "status": function(column,row) {
-            return "<h4><span class=\'label label-"+row.extra+" threeqtr-width\'>" + row.msg + "</span></h4>";
-        },
-        "ack": function(column,row) {
-            return "<button type=\'button\' class=\'btn btn-"+row.ack_col+" btn-sm command-ack-alert\' data-target=\'#ack-alert\' data-state=\'"+row.state+"\' data-alert_id=\'"+row.alert_id+"\' name=\'ack-alert\' id=\'ack-alert\' data-extra=\'"+row.extra+"\'><i class=\'fa fa-"+row.ack_ico+"\'aria-hidden=\'true\'></i></button>";
-        },
-        "proc": function(column,row) {
-            return "<button type=\'button\' class=\'btn btn-sm command-open-proc\' data-alert_id=\'"+row.alert_id+"\' name=\'open-proc\' id=\'open-proc\'>Open</button>";
-        },
-        "severity": function(column,row) {
-            var eventColor = "info";
-            if (row.severity.match (/critical/)) { eventColor = "danger"; }
-            else if (row.severity.match (/warning/)) { eventColor = "warning"; }
-            else if (row.severity.match (/ok/)) { eventColor = "success"; }
-            return "<h4><span class=\'label label-" + eventColor + " threeqtr-width\'>" + row.severity + "</span></h4>";
-        }
-    },
-    templates: {
-    }
+
 }).on("loaded.rs.jquery.bootgrid", function() {
     alerts_grid = $(this);
     alerts_grid.find(".incident-toggle").each( function() {
@@ -261,54 +301,22 @@ var alerts_grid = $("#alerts_'.$unique_id.'").bootgrid({
         $(this).find(".incident-toggle").fadeIn(200);
       }).on("mouseleave", function() {
         $(this).find(".incident-toggle").fadeOut(200);
-      }).on("click", "td:not(.incident-toggle-td)", function() {
-        var target = $(this).parent().find(".incident-toggle").data("target");
-        if( $(this).parent().find(".incident-toggle").hasClass(\'fa-plus\') ) {
-          $(this).parent().find(".incident-toggle").toggleClass(\'fa-plus fa-minus\');
-          $(target).collapse(\'toggle\');
-        }
       });
-    });
-    alerts_grid.find(".command-open-proc").on("click", function(e) {
-        e.preventDefault();
-        var alert_id = $(this).data("alert_id");
-        $.ajax({
-            type: "POST",
-            url: "ajax_form.php",
-            data: { type: "open-proc", alert_id: alert_id },
-            success: function(msg){
-	        if (msg != "ERROR") { window.open(msg); }
-                else {
-                    toastr.error("Procedure link does not seem to be valid, please check the rule");
-                }
-            },
-            error: function(){
-                 toastr.error("An error occurred opening procedure for this alert. Was the procedure link configured?");
-            }
-        });
     });
     alerts_grid.find(".command-ack-alert").on("click", function(e) {
         e.preventDefault();
-        var alert_id = $(this).data("alert_id");
-        var state = $(this).data("state");
-        $.ajax({
-            type: "POST",
-            url: "ajax_form.php",
-            data: { type: "ack-alert", alert_id: alert_id, state: state },
-            success: function(msg){
-                toastr.success(msg);
-                if(msg.indexOf("ERROR:") <= -1) {
-                    $(".alerts").each(function(index) {
-                        var $sortDictionary = $(this).bootgrid("getSortDictionary");
-                        $(this).reload;
-                        $(this).bootgrid("sort", $sortDictionary);
-                    });
-                }
-            },
-            error: function(){
-                 toastr.error("An error occurred acking this alert");
-            }
-        });
+        var alert_state = $(this).data("alert_state");
+        var alert_id = $(this).data(\'alert_id\');
+        $(\'#ack_alert_id\').val(alert_id);
+        $(\'#ack_alert_state\').val(alert_state);
+        $(\'#ack_msg\').val(\'\');
+        $("#alert_ack_modal").modal(\'show\');
+    });
+    alerts_grid.find(".command-alert-note").on("click", function(e) {
+        e.preventDefault();
+        var alert_id = $(this).data(\'alert_id\');
+        $(\'#alert_id\').val(alert_id);
+        $("#alert_notes_modal").modal(\'show\');
     });
 });
 </script>';
