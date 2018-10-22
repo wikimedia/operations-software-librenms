@@ -1,6 +1,6 @@
 os: speedtouch
 text: 'Thomson Speedtouch'
-ifname: true
+ifname: 1
 type: network
 over:
     - { graph: device_bits, text: Traffic }

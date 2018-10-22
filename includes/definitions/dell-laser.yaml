@@ -1,7 +1,7 @@
 os: dell-laser
 group: printer
 text: 'Dell Laser'
-ifname: true
+ifname: 1
 type: printer
 icon: dell
 over:
@@ -14,6 +14,7 @@ discovery:
         - 'Dell Laser Printer'
     - sysDescr_regex: '/^Dell.*(MFP|Printer|Laser)/'
 discovery_modules:
-    toner: true
+    toner: 1
 poller_modules:
-    toner: true
+    toner: 1
+

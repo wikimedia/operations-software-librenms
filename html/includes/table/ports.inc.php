@@ -23,46 +23,44 @@
  * @author     Tony Murray <murraytony@gmail.com>
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-
 $where = "`D`.`hostname` != '' ";
 $param = array();
 $sql = 'FROM `ports`';
 
-if (!LegacyAuth::user()->hasGlobalRead()) {
+if (is_admin() === false && is_read() === false) {
     $sql .= ' LEFT JOIN `devices_perms` AS `DP` ON `ports`.`device_id` = `DP`.`device_id`';
     $sql .= ' LEFT JOIN `ports_perms` AS `PP` ON `ports`.`port_id` = `PP`.`port_id`';
 
     $where .= ' AND (`DP`.`user_id`=? OR `PP`.`user_id`=?)';
-    $param[] = LegacyAuth::id();
-    $param[] = LegacyAuth::id();
+    $param[] = $_SESSION['user_id'];
+    $param[] = $_SESSION['user_id'];
 }
 
 $sql .= ' LEFT JOIN `devices` AS `D` ON `ports`.`device_id` = `D`.`device_id`';
 
-if (!empty($vars['hostname'])) {
-    $where .= ' AND (D.hostname LIKE ? OR D.sysName LIKE ?)';
-    $param += array_fill(count($param), 2, '%' . $vars['hostname'] . '%');
+if (!empty($_POST['hostname'])) {
+    $where .= ' AND `D`.`hostname` LIKE ?';
+    $param[] = '%' . $_POST['hostname'] . '%';
 }
 
-if (!empty($vars['location'])) {
+if (!empty($_POST['location'])) {
     $where .= " AND `D`.`location` = ?";
-    $param[] = $vars['location'];
+    $param[] = $_POST['location'];
 }
 
 $sql .= " WHERE $where ";
 
-if (!empty($vars['errors'])) {
+if (!empty($_POST['errors'])) {
     $sql .= " AND (`ports`.`ifInErrors_delta` > 0 OR `ports`.`ifOutErrors_delta` > 0)";
 }
 
-if (!empty($vars['device_id'])) {
+if (!empty($_POST['device_id'])) {
     $sql .= ' AND `ports`.`device_id`=?';
-    $param[] = $vars['device_id'];
+    $param[] = $_POST['device_id'];
 }
 
-if (!empty($vars['state'])) {
-    switch ($vars['state']) {
+if (!empty($_POST['state'])) {
+    switch ($_POST['state']) {
         case "down":
             $sql .= " AND `ports`.`ifAdminStatus` = ? AND `ports`.`ifOperStatus` = ?";
             $param[] = "up";
@@ -80,34 +78,34 @@ if (!empty($vars['state'])) {
     }
 }
 
-if (!empty($vars['ifSpeed'])) {
+if (!empty($_POST['ifSpeed'])) {
     $sql .= ' AND `ports`.`ifSpeed`=?';
-    $param[] = $vars['ifSpeed'];
+    $param[] = $_POST['ifSpeed'];
 }
 
-if (!empty($vars['ifType'])) {
+if (!empty($_POST['ifType'])) {
     $sql .= ' AND `ports`.`ifType`=?';
-    $param[] = $vars['ifType'];
+    $param[] = $_POST['ifType'];
 }
 
-if (!empty($vars['port_descr_type'])) {
+if (!empty($_POST['port_descr_type'])) {
     $sql .= ' AND `ports`.`port_descr_type`=?';
-    $param[] = $vars['port_descr_type'];
+    $param[] = $_POST['port_descr_type'];
 }
 
-if (!empty($vars['ifAlias'])) {
+if (!empty($_POST['ifAlias'])) {
     $sql .= ' AND `ports`.`ifAlias` LIKE ?';
-    $param[] = '%' . $vars['ifAlias'] . '%';
+    $param[] = '%' . $_POST['ifAlias'] . '%';
 }
 
 $sql .= ' AND `ports`.`disabled`=?';
-$param[] = (int)(isset($vars['disabled']) && $vars['disabled']);
+$param[] = (int)(isset($_POST['disabled']) && $_POST['disabled']);
 
 $sql .= ' AND `ports`.`ignore`=?';
-$param[] = (int)(isset($vars['ignore']) && $vars['ignore']);
+$param[] = (int)(isset($_POST['ignore']) && $_POST['ignore']);
 
 $sql .= ' AND `ports`.`deleted`=?';
-$param[] = (int)(isset($vars['deleted']) && $vars['deleted']);
+$param[] = (int)(isset($_POST['deleted']) && $_POST['deleted']);
 
 $count_sql = "SELECT COUNT(`ports`.`port_id`) $sql";
 $total = (int)dbFetchCell($count_sql, $param);
@@ -143,47 +141,21 @@ foreach (dbFetchRows($query, $param) as $port) {
     $device = device_by_id_cache($port['device_id']);
     $port = cleanPort($port, $device);
 
-    switch ($port['ifOperStatus']) {
-        case 'up':
-            $status = 'label-success';
-            break;
-        case 'down':
-            switch ($port['ifAdminStatus']) {
-                case 'up':
-                    $status = 'label-danger';
-                    break;
-                case 'down':
-                    $status = 'label-warning';
-                    break;
-            }
-            break;
-    }
-
     // FIXME what actions should we have?
     $actions = '<div class="container-fluid"><div class="row">';
+    $actions .= '<div class="col-xs-1"><a href="';
+    $actions .= generate_device_url($device, array('tab' => 'alerts'));
+    $actions .= '"><i class="fa fa-exclamation-circle fa-lg icon-theme" title="View alerts" aria-hidden="true"></i></a></div>';
 
-    if ($vars['deleted'] !== 'yes') {
+    if ($_SESSION['userlevel'] >= '7') {
         $actions .= '<div class="col-xs-1"><a href="';
-        $actions .= generate_device_url($device, array('tab' => 'alerts'));
-        $actions .= '" title="View alerts"><i class="fa fa-exclamation-circle fa-lg icon-theme" aria-hidden="true"></i></a></div>';
-
-        if (LegacyAuth::user()->hasGlobalAdmin()) {
-            $actions .= '<div class="col-xs-1"><a href="';
-            $actions .= generate_device_url($device, array('tab' => 'edit', 'section' => 'ports'));
-            $actions .= '" title="Edit ports"><i class="fa fa-pencil fa-lg icon-theme" aria-hidden="true"></i></a></div>';
-        }
-    }
-
-    if ($vars['deleted'] === 'yes') {
-        if (port_permitted($port['port_id'], $device['device_id'])) {
-            $actions .= '<div class="col-xs-1"><a href="ports/deleted=yes/purge=' . $port['port_id'] . '" title="Delete port"><i class="fa fa-times fa-lg icon-theme"></i></a></div>';
-        }
+        $actions .= generate_device_url($device, array('tab' => 'edit', 'section' => 'ports'));
+        $actions .= '"><i class="fa fa-pencil fa-lg icon-theme" title="Edit ports" aria-hidden="true"></i></a></div>';
     }
 
     $actions .= '</div></div>';
 
     $response[] = array(
-        'status' => $status,
         'device' => generate_device_link($device),
         'port' => generate_port_link($port),
         'ifLastChange' => ceil($port['secondsIfLastChange']),

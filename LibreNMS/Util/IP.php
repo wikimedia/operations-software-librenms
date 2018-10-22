@@ -221,11 +221,4 @@ abstract class IP
     {
         return array_pad(explode('/', $ip, 2), 2, $this->host_bits);
     }
-
-    /**
-     * Convert this IP to an snmp index hex encoded
-     *
-     * @return string
-     */
-    abstract public function toSnmpIndex();
 }

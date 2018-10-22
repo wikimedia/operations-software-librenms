@@ -1,5 +1,5 @@
 <?php
-$lastSpace = strrpos($device['sysDescr'], ' ');
+$lastSpace = strrpos($poll_device['sysDescr'], ' ');
 
-$hardware = trim(substr($device['sysDescr'], 0, $lastSpace));
-$version = trim(substr($device['sysDescr'], $lastSpace));
+$hardware = trim(substr($poll_device['sysDescr'], 0, $lastSpace));
+$version = trim(substr($poll_device['sysDescr'], $lastSpace));

@@ -26,7 +26,6 @@ if (rrdtool_check_rrd_exists(get_port_rrdfile_path($device['hostname'], $port['p
             <div class="panel-heading">
                 <h3 class="panel-title">Interface Non Unicast</h3>
             </div>';
-
     $graph_type = 'port_nupkts';
     echo '<div class="panel-body">';
         include 'includes/print-interface-graphs.inc.php';
@@ -36,24 +35,11 @@ if (rrdtool_check_rrd_exists(get_port_rrdfile_path($device['hostname'], $port['p
             <div class="panel-heading">
                 <h3 class="panel-title">Interface Errors</h3>
             </div>';
-
     $graph_type = 'port_errors';
 
     echo '<div class="panel-body">';
         include 'includes/print-interface-graphs.inc.php';
     echo '</div></div>';
-
-    if (rrdtool_check_rrd_exists(get_port_rrdfile_path($device['hostname'], $port['port_id'], 'poe'))) {
-        echo '<div class="panel panel-default">
-            <div class="panel-heading">
-                <h3 class="panel-title">PoE</h3>
-            </div>';
-        $graph_type = 'port_poe';
-        
-        echo '<div class="panel-body">';
-            include 'includes/print-interface-graphs.inc.php';
-        echo '</div></div>';
-    }
 
     if (rrdtool_check_rrd_exists(get_port_rrdfile_path($device['hostname'], $port['port_id'], 'dot3'))) {
         echo '<div class="panel panel-default">

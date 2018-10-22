@@ -26,15 +26,14 @@
 namespace LibreNMS\Validations;
 
 use LibreNMS\Config;
+use LibreNMS\Interfaces\ValidationGroup;
 use LibreNMS\RRDRecursiveFilterIterator;
 use LibreNMS\Validator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
-class RrdCheck extends BaseValidation
+class RrdCheck implements ValidationGroup
 {
-    protected static $RUN_BY_DEFAULT = false;
-
     /**
      * Validate this module.
      * To return ValidationResults, call ok, warn, fail, or result methods on the $validator
@@ -79,5 +78,15 @@ class RrdCheck extends BaseValidation
 
         echo "\033[" . $screenpad . "D";
         echo "Status: " . $loopcount . "/" . $rrd_total . " - Complete\n";
+    }
+
+    /**
+     * Returns if this test should be run by default or not.
+     *
+     * @return bool
+     */
+    public function isDefault()
+    {
+        return false;
     }
 }

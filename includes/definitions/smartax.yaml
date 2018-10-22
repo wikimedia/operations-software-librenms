@@ -3,10 +3,7 @@ group: huawei
 text: 'Huawei SmartAX'
 type: network
 icon: huawei
-ifname: true
-over:
-    - { graph: device_bits, text: 'Device Traffic' }
-    - { graph: device_processor, text: 'CPU Usage' }
+ifname: 1
 discovery:
     - sysDescr:
-        - 'Huawei Integrated Access Software'
+        - Huawei Integrated Access Software

@@ -54,9 +54,9 @@ foreach (dbFetchRows('SELECT * FROM `cef_switching` WHERE `device_id` = ?  ORDER
     $entity = dbFetchRow('SELECT * FROM `entPhysical` WHERE device_id = ? AND `entPhysicalIndex` = ?', array($device['device_id'], $cef['entPhysicalIndex']));
 
     if (!is_integer($i / 2)) {
-        $bg_colour = $config['list_colour']['even'];
+        $bg_colour = $list_colour_a;
     } else {
-        $bg_colour = $config['list_colour']['odd'];
+        $bg_colour = $list_colour_b;
     }
 
     $interval = ($cef['updated'] - $cef['updated_prev']);

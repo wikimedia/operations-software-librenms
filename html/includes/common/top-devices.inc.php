@@ -8,19 +8,17 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-
-$top_query = $widget_settings['top_query'] ?: 'traffic';
+$top_query = $widget_settings['top_query'];
 $sort_order = $widget_settings['sort_order'];
 
 $selected_sort_asc = '';
@@ -38,7 +36,6 @@ $selected_ping = '';
 $selected_cpu = '';
 $selected_ram = '';
 $selected_poller = '';
-$selected_storage = '';
 
 switch ($top_query) {
     case "traffic":
@@ -76,13 +73,6 @@ switch ($top_query) {
         $selected_poller = 'selected';
         $graph_type = 'device_poller_perf';
         $graph_params = array('tab' => 'graphs', 'group' => 'poller');
-        break;
-    case "storage":
-        $table_header = 'Disk usage';
-        $selected_storage = 'selected';
-        $graph_type = 'device_storage';
-        $graph_params = array('tab' => 'health', 'metric' => 'storage');
-        break;
 }
 
 $widget_settings['device_count']  = $widget_settings['device_count'] > 0 ? $widget_settings['device_count'] : 5;
@@ -111,7 +101,6 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
                     <option value="poller" ' . $selected_poller . '>Poller duration</option>
                     <option value="cpu" ' . $selected_cpu . '>Processor load</option>
                     <option value="ram" ' . $selected_ram . '>Memory usage</option>
-                    <option value="storage" ' . $selected_storage . '>Disk usage</option>
                 </select>
             </div>
         </div>
@@ -155,12 +144,10 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
 
     $common_output[] = '<h4>Top ' . $device_count . ' devices (last ' . $interval . ' minutes)</h4>';
 
-    $params = ['interval' => $interval_seconds, 'count' => $device_count];
-    if (!LegacyAuth::user()->hasGlobalRead()) {
-        $params['user'] = LegacyAuth::id();
-    }
+    $params = array('user' => $_SESSION['user_id'], 'interval' => array($interval_seconds), 'count' => array($device_count));
+
     if ($top_query === 'traffic') {
-        if (LegacyAuth::user()->hasGlobalRead()) {
+        if (is_admin() || is_read()) {
             $query = '
             SELECT *, sum(p.ifInOctets_rate + p.ifOutOctets_rate) as total
             FROM ports as p, devices as d
@@ -187,7 +174,7 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
             ';
         }
     } elseif ($top_query === 'uptime') {
-        if (LegacyAuth::user()->hasGlobalRead()) {
+        if (is_admin() || is_read()) {
             $query = 'SELECT `uptime`, `hostname`, `last_polled`, `device_id`, `sysName` 
                       FROM `devices` 
                       WHERE unix_timestamp() - UNIX_TIMESTAMP(`last_polled`) < :interval 
@@ -203,7 +190,7 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
                       LIMIT :count';
         }
     } elseif ($top_query === 'ping') {
-        if (LegacyAuth::user()->hasGlobalRead()) {
+        if (is_admin() || is_read()) {
             $query = 'SELECT `last_ping_timetaken`, `hostname`, `last_polled`, `device_id`, `sysName`
                       FROM `devices` 
                       WHERE unix_timestamp() - UNIX_TIMESTAMP(`last_polled`) < :interval 
@@ -219,7 +206,7 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
                       LIMIT :count';
         }
     } elseif ($top_query === 'cpu') {
-        if (LegacyAuth::user()->hasGlobalRead()) {
+        if (is_admin() || is_read()) {
             $query = 'SELECT `hostname`, `last_polled`, `d`.`device_id`, avg(`processor_usage`) as `cpuload`, `d`.`sysName`
                       FROM `processors` AS `procs`, `devices` AS `d` 
                       WHERE `d`.`device_id` = `procs`.`device_id` 
@@ -230,14 +217,14 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
         } else {
             $query = 'SELECT `hostname`, `last_polled`, `d`.`device_id`, avg(`processor_usage`) as `cpuload`, `d`.`sysName`
                       FROM `processors` AS procs, `devices` AS `d`, `devices_perms` AS `P`
-					  WHERE `P`.`user_id` = :user AND `P`.`device_id` = `procs`.`device_id` AND `P`.`device_id` = `d`.`device_id` 
+					  WHERE `P`.`user_id` = :user AND `P`.`device_id` = `procs`.`device_id` 
                       AND unix_timestamp() - UNIX_TIMESTAMP(`last_polled`) < :interval
                       GROUP BY `procs`.`device_id`, `d`.`hostname`, `d`.`last_polled`, `d`.`sysName`
                       ORDER BY `cpuload` ' . $sort_order . '
                       LIMIT :count';
         }
     } elseif ($top_query === 'ram') {
-        if (LegacyAuth::user()->hasGlobalRead()) {
+        if (is_admin() || is_read()) {
             $query = 'SELECT `hostname`, `last_polled`, `d`.`device_id`, `mempool_perc`, `d`.`sysName`
                       FROM `mempools` as `mem`, `devices` as `d`
                       WHERE `d`.`device_id` = `mem`.`device_id`
@@ -248,32 +235,14 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
         } else {
             $query = 'SELECT `hostname`, `last_polled`, `d`.`device_id`, `mempool_perc`, `d`.`sysName`
                       FROM `mempools` as `mem`, `devices` as `d`, `devices_perms` AS `P`
-                      WHERE `P`.`user_id` = :user AND `P`.`device_id` = `mem`.`device_id` AND `P`.`device_id` = `d`.`device_id` 
+                      WHERE `P`.`user_id` = :user AND `P`.`device_id` = `mem`.`device_id`
                       AND `mempool_descr` IN (\'Physical memory\',\'Memory\')
                       AND unix_timestamp() - UNIX_TIMESTAMP(`last_polled`) < :interval 
                       ORDER BY `mempool_perc` ' . $sort_order . '
                       LIMIT :count';
         }
-    } elseif ($top_query === 'storage') {
-        if (LegacyAuth::user()->hasGlobalRead()) {
-            $query = 'SELECT `hostname`, `last_polled`, `d`.`device_id`, `storage_perc`, `d`.`sysName`, `storage_descr`, `storage_perc_warn`, `storage_id`
-                      FROM `storage` as `disk`, `devices` as `d`
-                      WHERE `d`.`device_id` = `disk`.`device_id`
-                      AND `d`.`type` = \'server\'
-                      AND unix_timestamp() - UNIX_TIMESTAMP(`last_polled`) < :interval 
-                      ORDER BY `storage_perc` ' . $sort_order . '
-                      LIMIT :count';
-        } else {
-            $query = 'SELECT `hostname`, `last_polled`, `d`.`device_id`, `storage_perc`, `d`.`sysName`, `storage_descr`, `storage_perc_warn`, `storage_id`
-                      FROM `storage` as `disk`, `devices` as `d`, `devices_perms` AS `P`
-                      WHERE `P`.`user_id` = :user AND `P`.`device_id` = `disk`.`device_id` AND `P`.`device_id` = `d`.`device_id` 
-                      AND `d`.`type` = \'server\'
-                      AND unix_timestamp() - UNIX_TIMESTAMP(`last_polled`) < :interval 
-                      ORDER BY `storage_perc` ' . $sort_order . '
-                      LIMIT :count';
-        }
     } elseif ($top_query === 'poller') {
-        if (LegacyAuth::user()->hasGlobalRead()) {
+        if (is_admin() || is_read()) {
             $query = 'SELECT `last_polled_timetaken`, `hostname`, `last_polled`, `device_id`, `sysName`
                       FROM `devices` 
                       WHERE unix_timestamp() - UNIX_TIMESTAMP(`last_polled`) < :interval 
@@ -296,11 +265,8 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
         <table class="table table-hover table-condensed table-striped bootgrid-table">
         <thead>
             <tr>
-                <th class="text-left">Device</th>';
-    if ($top_query == 'storage') {
-        $common_output[] = '<th class="text-left">Storage Device</th>';
-    }
-    $common_output[] = '                <th class="text-left">' . $table_header . '</a></th>
+                <th class="text-left">Device</th>
+                <th class="text-left">' . $table_header . '</a></th>
             </tr>
         </thead>
         <tbody>';
@@ -309,32 +275,8 @@ if (defined('SHOW_SETTINGS') || empty($widget_settings)) {
         $common_output[] = '
         <tr>
             <td class="text-left">' . generate_device_link($result, shorthost($result['hostname'])) . '</td>
-            <td class="text-left">';
-        if ($top_query == 'storage') {
-            $graph_array = array();
-            $graph_array['height'] = '100';
-            $graph_array['width'] = '210';
-            $graph_array['to']     = $config['time']['now'];
-            $graph_array['id']     = $drive['storage_id'];
-            $graph_array['type']   = $graph_type;
-            $graph_array['from']   = $config['time']['day'];
-            $graph_array['legend'] = 'no';
-
-            $overlib_content = generate_overlib_content($graph_array, $result['hostname'].' - '.$result['storage_descr']);
-
-            $link_array = $graph_array;
-            $link_array['page'] = 'graphs';
-            unset($link_array['height'], $link_array['width'], $link_array['legend']);
-            $link = generate_url($link_array);
-
-            $percent = $result['storage_perc'];
-            $background = get_percentage_colours($percent, $result['storage_perc_warn']);
-            $common_output[] = shorten_text($result['storage_descr'], 50).'</td><td class="text-left">';
-            $common_output[] = overlib_link($link, print_percentage_bar(150, 20, $percent, null, 'ffffff', $background['left'], $percent.'%', 'ffffff', $background['right']), $overlib_content);
-        } else {
-            $common_output[] = generate_device_link($result, generate_minigraph_image($result, $config['time']['day'], $config['time']['now'], $graph_type, 'no', 150, 21), $graph_params, 0, 0, 0);
-        }
-        $common_output[] = '</td></tr>';
+            <td class="text-left">' . generate_device_link($result, generate_minigraph_image($result, $config['time']['day'], $config['time']['now'], $graph_type, 'no', 150, 21), $graph_params, 0, 0, 0) . '</td>
+        </tr>';
     }
     $common_output[] = '
         </tbody>

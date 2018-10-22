@@ -1,34 +1,31 @@
 <?php
 
-use LibreNMS\Authentication\LegacyAuth;
-
 echo '<div style="margin: 10px;">';
 
-if (!LegacyAuth::user()->isAdmin()) {
+if ($_SESSION['userlevel'] < 10 || $_SESSION['userlevel'] > 10) {
     include 'includes/error-no-perm.inc.php';
 } else {
     echo '<h3>Delete User</h3>';
 
     $pagetitle[] = 'Delete user';
 
-    if (LegacyAuth::get()->canManageUsers()) {
+    if (auth_usermanagement()) {
         if ($vars['action'] == 'del') {
-            $id = (int)$vars['id'];
-            $user = LegacyAuth::get()->getUser($id);
+            $delete_username = dbFetchCell('SELECT username FROM users WHERE user_id = ?', array($vars['id']));
 
             if ($vars['confirm'] == 'yes') {
-                if (LegacyAuth::get()->deleteUser($id) >= 0) {
-                    print_message('<div class="infobox">User "'.$user['username'].'" deleted!');
+                if (deluser($vars['id']) >= 0) {
+                    print_message('<div class="infobox">User "'.$delete_username.'" deleted!');
                 } else {
-                    print_error('Error deleting user "'.$user['username'].'"!');
+                    print_error('Error deleting user "'.$delete_username.'"!');
                 }
             } else {
-                print_error('You have requested deletion of the user "'.$user['username'].'". This action can not be reversed.<br /><a class="btn btn-danger" href="deluser/action=del/id='.$id.'/confirm=yes">Click to confirm</a>');
+                print_error('You have requested deletion of the user "'.$delete_username.'". This action can not be reversed.<br /><a class="btn btn-danger" href="deluser/action=del/id='.$vars['id'].'/confirm=yes">Click to confirm</a>');
             }
         }
 
         // FIXME v mysql query should be replaced by authmodule
-        $userlist = LegacyAuth::get()->getUserlist();
+        $userlist = dbFetchRows('SELECT * FROM `users`');
 
         echo '
             <form role="form" class="form-horizontal" method="GET" action="">

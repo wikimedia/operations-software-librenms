@@ -16,11 +16,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02150-1301, USA.
  */
 
+error_reporting((E_ALL | E_NOTICE | E_WARNING));
+
 require 'includes/collectd/config.php';
 require 'includes/collectd/functions.php';
 require 'includes/collectd/definitions.php';
 
-global $MetaGraphDefs;
 load_graph_definitions();
 
 
@@ -87,15 +88,15 @@ foreach ($pinsts as &$instance) {
         $typeinstances = collectd_list_tinsts($device['hostname'], $vars['plugin'], $instance, $type);
 
         if ($MetaGraphDefs[$type]) {
-            $typeinstances = array('');
+            $typeinstances = array($MetaGraphDefs[$type]);
         }
 
         foreach ($typeinstances as &$tinst) {
             $i++;
             if (!is_integer($i / 2)) {
-                $row_colour = $config['list_colour']['even'];
+                $row_colour = $list_colour_a;
             } else {
-                $row_colour = $config['list_colour']['odd'];
+                $row_colour = $list_colour_b;
             }
 
             echo '<div style="background-color: '.$row_colour.';">';

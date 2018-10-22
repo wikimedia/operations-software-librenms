@@ -27,7 +27,7 @@ namespace LibreNMS\Tests;
 
 use LibreNMS\RRD\RrdDefinition;
 
-class RrdDefinitionTest extends TestCase
+class RrdDefinitionTest extends \PHPUnit_Framework_TestCase
 {
     public function testEmpty()
     {

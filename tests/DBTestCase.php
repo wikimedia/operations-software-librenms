@@ -25,20 +25,24 @@
 
 namespace LibreNMS\Tests;
 
-abstract class DBTestCase extends TestCase
+class DBTestCase extends \PHPUnit_Framework_TestCase
 {
-    protected $db_name;
-
     public function setUp()
     {
         parent::setUp();
-        $this->dbSetUp();
-        $this->db_name = dbFetchCell('SELECT DATABASE()');
+        if (getenv('DBTEST')) {
+            dbConnect();
+            dbBeginTransaction();
+        } else {
+            $this->markTestSkipped('Database tests not enabled.  Set DBTEST=1 to enable.');
+        }
     }
 
     public function tearDown()
     {
-        $this->dbTearDown();
         parent::tearDown();
+        if (getenv('DBTEST')) {
+            dbRollbackTransaction();
+        }
     }
 }

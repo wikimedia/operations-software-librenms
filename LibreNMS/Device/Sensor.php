@@ -25,7 +25,6 @@
 
 namespace LibreNMS\Device;
 
-use LibreNMS\Config;
 use LibreNMS\Interfaces\Discovery\DiscoveryModule;
 use LibreNMS\Interfaces\Polling\PollerModule;
 use LibreNMS\OS;
@@ -255,7 +254,7 @@ class Sensor implements DiscoveryModule, PollerModule
      *
      * @param OS $os
      */
-    public static function runDiscovery(OS $os)
+    public static function discover(OS $os)
     {
         // Add discovery types here
     }
@@ -269,18 +268,9 @@ class Sensor implements DiscoveryModule, PollerModule
     {
         $table = static::$table;
 
-        $query = "SELECT * FROM `$table` WHERE `device_id` = ?";
-        $params = [$os->getDeviceId()];
-
-        $submodules = Config::get('poller_submodules.wireless', []);
-        if (!empty($submodules)) {
-            $query .= " AND `sensor_class` IN " . dbGenPlaceholders(count($submodules));
-            $params = array_merge($params, $submodules);
-        }
-
         // fetch and group sensors, decode oids
         $sensors = array_reduce(
-            dbFetchRows($query, $params),
+            dbFetchRows("SELECT * FROM `$table` WHERE `device_id` = ?", array($os->getDeviceId())),
             function ($carry, $sensor) {
                 $sensor['sensor_oids'] = json_decode($sensor['sensor_oids']);
                 $carry[$sensor['sensor_class']][] = $sensor;
@@ -304,7 +294,7 @@ class Sensor implements DiscoveryModule, PollerModule
         }
 
         // pre-fetch all standard sensors
-        $standard_sensors = collect($sensors)->flatten(1)->all();
+        $standard_sensors = call_user_func_array('array_merge', $sensors);
         $pre_fetch = self::fetchSnmpData($os->getDevice(), $standard_sensors);
 
         // poll standard sensors
@@ -621,8 +611,7 @@ class Sensor implements DiscoveryModule, PollerModule
                 $sensor['sensor_type'],
                 $sensor['sensor_index']
             );
-            $rrd_type = isset($types[$sensor['sensor_class']]['type']) ? strtoupper($types[$sensor['sensor_class']]['type']) : 'GAUGE';
-            $rrd_def = RrdDefinition::make()->addDataset('sensor', $rrd_type);
+            $rrd_def = RrdDefinition::make()->addDataset('sensor', 'GAUGE');
 
             $fields = array(
                 'sensor' => isset($sensor_value) ? $sensor_value : 'U',

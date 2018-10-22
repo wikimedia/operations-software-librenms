@@ -2,9 +2,8 @@ os: airos
 text: 'Ubiquiti AirOS'
 type: wireless
 icon: ubiquiti
-nobulk: true
+nobulk: 1
 group: ubnt
 over:
-    - { graph: device_bits, text: 'Device Traffic' }
-    - { graph: device_wireless_clients, text: 'Connected Clients' }
-    - { graph: device_wireless_ccq, text: 'Connection Quality' }
+    - { graph: device_bits }
+    - { graph: device_processor }

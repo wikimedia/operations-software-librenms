@@ -11,9 +11,7 @@
  * the source code distribution for details.
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-
-if (!LegacyAuth::user()->hasGlobalAdmin()) {
+if (is_admin() === false) {
     die('ERROR: You need to be admin');
 }
 
@@ -56,11 +54,11 @@ $('#alert-template-removal').click('', function(event) {
                 $('[data-row-id="'+template_id+'"]').remove();
             }
             $("#template_id").val('');
-            toastr.success(msg);
+            $("#message").html('<div class="alert alert-info">'+msg+'</div>');
             $("#confirm-delete-alert-template").modal('hide');
         },
         error: function() {
-            toastr.error("The alert template could not be deleted.");
+            $("#message").html('<div class="alert alert-danger">The alert template could not be deleted.</div>');
             $("#confirm-delete-alert-template").modal('hide');
         }
     });

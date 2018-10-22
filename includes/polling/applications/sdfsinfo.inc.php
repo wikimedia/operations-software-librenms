@@ -31,6 +31,7 @@ d_echo($name);
 $sdfsinfo = snmp_walk($device, $oid, $options);
 
 if (is_string($sdfsinfo)) {
+    update_application($app, $sdfsinfo);
     $rrd_name = array('app', $name, $app_id);
 
     $rrd_def = RrdDefinition::make()
@@ -64,7 +65,5 @@ if (is_string($sdfsinfo)) {
 
     $tags = array('name' => $name, 'app_id' => $app_id, 'rrd_def' => $rrd_def, 'rrd_name' => $rrd_name);
     data_update($device, 'app', $tags, $fields);
-    update_application($app, $sdfsinfo, $fields);
-
     unset($sdfsinfo, $rrd_name, $rrd_def, $data, $fields, $tags);
 }

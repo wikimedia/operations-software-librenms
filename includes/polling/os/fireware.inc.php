@@ -12,4 +12,4 @@
  * the source code distribution for details.
  */
 
-$hardware = $device['sysDescr'];
+$hardware = $poll_device['sysDescr'];

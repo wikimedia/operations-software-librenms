@@ -25,9 +25,7 @@
 
 namespace LibreNMS\OS;
 
-use LibreNMS\Device\Processor;
 use LibreNMS\Device\WirelessSensor;
-use LibreNMS\Interfaces\Discovery\ProcessorDiscovery;
 use LibreNMS\Interfaces\Discovery\Sensors\WirelessFrequencyDiscovery;
 use LibreNMS\Interfaces\Discovery\Sensors\WirelessPowerDiscovery;
 use LibreNMS\Interfaces\Discovery\Sensors\WirelessRssiDiscovery;
@@ -35,31 +33,11 @@ use LibreNMS\Interfaces\Discovery\Sensors\WirelessSnrDiscovery;
 use LibreNMS\OS;
 
 class Ray extends OS implements
-    ProcessorDiscovery,
     WirelessFrequencyDiscovery,
     WirelessPowerDiscovery,
     WirelessRssiDiscovery,
     WirelessSnrDiscovery
 {
-    /**
-     * Discover processors.
-     * Returns an array of LibreNMS\Device\Processor objects that have been discovered
-     *
-     * @return array Processors
-     */
-    public function discoverProcessors()
-    {
-        // RAY-MIB::useCpu has no index, so it won't work in yaml
-
-        return array(
-            Processor::discover(
-                $this->getName(),
-                $this->getDeviceId(),
-                '.1.3.6.1.4.1.33555.1.1.5.1',
-                0
-            )
-        );
-    }
 
     /**
      * Discover wireless frequency.  This is in GHz. Type is frequency.
@@ -69,11 +47,9 @@ class Ray extends OS implements
      */
     public function discoverWirelessFrequency()
     {
+        $oid = '.1.3.6.1.4.1.33555.1.2.1.4'; // RAY-MIB::txFreq.0
         return array(
-            // RAY-MIB::txFreq.0
-            new WirelessSensor('frequency', $this->getDeviceId(), '.1.3.6.1.4.1.33555.1.2.1.4', 'racom-tx', 1, 'TX Frequency', null, 1, 1000),
-            // RAY-MIB::rxFreq.0
-            new WirelessSensor('frequency', $this->getDeviceId(), '.1.3.6.1.4.1.33555.1.2.1.3', 'racom-rx', 1, 'RX Frequency', null, 1, 1000),
+            new WirelessSensor('frequency', $this->getDeviceId(), $oid, 'racom', 1, 'Frequency', null, 1, 1000),
         );
     }
 
@@ -85,11 +61,9 @@ class Ray extends OS implements
      */
     public function discoverWirelessPower()
     {
+        $oid = '.1.3.6.1.4.1.33555.1.2.1.12'; // RAY-MIB::rfPowerConfigured.0
         return array(
-            // RAY-MIB::rfPowerCurrent.0
-            new WirelessSensor('power', $this->getDeviceId(), '.1.3.6.1.4.1.33555.1.2.1.17', 'racom-pow-cur', 1, 'Tx Power Current'),
-            //RAY-MIB::rfPowerConfigured.0
-            new WirelessSensor('power', $this->getDeviceId(), '.1.3.6.1.4.1.33555.1.2.1.12', 'racom-pow-conf', 1, 'Tx Power Configured'),
+            new WirelessSensor('power', $this->getDeviceId(), $oid, 'racom', 1, 'Tx Power'),
         );
     }
 

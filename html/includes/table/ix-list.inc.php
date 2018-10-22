@@ -18,11 +18,11 @@
  *
  * @package    LibreNMS
  * @link       http://librenms.org
- * @copyright  2018 Neil Lathwood
+ * @copyright  2017 Neil Lathwood
  * @author     Neil Lathwood <neil@lathwood.co.uk>
  */
 
-$asn = clean($vars['asn']);
+$asn = clean($_POST['asn']);
 
 $sql    = " FROM `pdb_ix` WHERE `asn` = ?";
 $params = array($asn);

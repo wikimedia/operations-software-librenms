@@ -3,15 +3,13 @@ source: Extensions/Services.md
 
 Services within LibreNMS provides the ability to use Nagios plugins to perform additional monitoring outside of SNMP.
 
-**These services are tied into an existing device so you need at least one device to be able to add it
-to LibreNMS - localhost is a good one. This is needed in order for alerting to work properly.**
+These services are tied into an existing device so you need at least one device that supports SNMP to be able to add it
+to LibreNMS - localhost is a good one.
 
 ## Setup
 
 > Service checks is now distributed aware. If you run a distributed setup then you can now run 
 `services-wrapper.py` in cron instead of `check-services.php` across all polling nodes.
-
-If you need to debug the output of services-wrapper.py then you can add `-d` to the end of the command - it is NOT recommended to do this in cron.
 
 Firstly, install Nagios plugins however you would like, this could be via yum, apt-get or direct from source.
 
@@ -32,14 +30,12 @@ For example:
 chmod +x /usr/lib/nagios/plugins/*
 ```
 
-Finally, you now need to add services-wrapper.py to the current cron file (/etc/cron.d/librenms typically) like:
+Finally, you now need to add check-services.php to the current cron file (/etc/cron.d/librenms typically) like:
 ```bash
-*/5 * * * * librenms /opt/librenms/services-wrapper.py 1
+*/5 * * * * librenms /opt/librenms/check-services.php >> /dev/null 2>&1
 ```
 
 Now you can add services via the main Services link in the navbar, or via the 'Add Service' link within the device, services page.
-
-Note that some services (procs, inodes, load and similar) will always poll the local LibreNMS server it's running on, regardless of which device you add it to.
 
 ## Performance data
 
@@ -91,11 +87,3 @@ then you can run the following command to help troubleshoot services.
 ```
 ./check-services.php -d
 ```
-## Service checks polling logic
-
-Service check is skipped when the associated device is not pingable, and an appropriate entry is populated in the event log. 
-Service check is polled if it's `IP address` parameter is not equal to associated device's IP address, even when the associated device is not pingable.
-
-To override the default logic and always poll service checks, you can disable ICMP testing for any device by switching `Disable ICMP Test` setting (Edit -> Misc) to ON.
-
-Service checks will never be polled on disabled devices.

@@ -1,4 +1,5 @@
 <?php
+
 /*
  * LibreNMS
  *
@@ -9,30 +10,22 @@
  * Free Software Foundation, either version 3 of the License, or (at your
  * option) any later version.  Please see LICENSE.txt at the top level of
  * the source code distribution for details.
- *
- * @package    LibreNMS
- * @subpackage webui
- * @link       http://librenms.org
- * @copyright  2017 LibreNMS
- * @author     LibreNMS Contributors
-*/
-
-use LibreNMS\Authentication\LegacyAuth;
+ */
 
 if (empty($results_limit)) {
     $results_limit = 25;
 }
-$tmp_output = '
+$tmp_output = '<h3>Graylog</h3>
 
 <div class="table-responsive">
     <table id="graylog" class="table table-hover table-condensed graylog">
         <thead>
             <tr>
                 <th data-column-id="timestamp">Timestamp</th>
-                <th data-column-id="level">Level</th>
                 <th data-column-id="source">Source</th>
                 <th data-column-id="message">Message</th>
-                <th data-column-id="facility">Facility</th>
+                <th data-column-id="facility" data-visible="false">Facility</th>
+                <th data-column-id="level" data-visible="false">Level</th>
             </tr>
         </thead>
     </table>
@@ -55,10 +48,10 @@ if (!empty($filter_device)) {
             "<option value=\"\">All devices</option>"+
 ';
 
-    if (LegacyAuth::user()->hasGlobalRead()) {
+    if (is_admin() === true || is_read() === true) {
         $results = dbFetchRows("SELECT `hostname` FROM `devices` GROUP BY `hostname` ORDER BY `hostname`");
     } else {
-        $results = dbFetchRows("SELECT `D`.`hostname` FROM `devices` AS `D`, `devices_perms` AS `P` WHERE `P`.`user_id` = ? AND `P`.`device_id` = `D`.`device_id` GROUP BY `hostname` ORDER BY `hostname`", array(LegacyAuth::id()));
+        $results = dbFetchRows("SELECT `D`.`hostname` FROM `devices` AS `D`, `devices_perms` AS `P` WHERE `P`.`user_id` = ? AND `P`.`device_id` = `D`.`device_id` GROUP BY `hostname` ORDER BY `hostname`", array($_SESSION['user_id']));
     }
 
     foreach ($results as $data) {
@@ -76,12 +69,6 @@ if (!empty($filter_device)) {
 
 if (empty($filter_device) && isset($_POST['hostname'])) {
     $filter_device = mres($_POST['hostname']);
-}
-
-if (isset($config['graylog']['timezone'])) {
-    $timezone = 'row.timestamp;';
-} else {
-    $timezone = 'moment.parseZone(row.timestamp).local().format("YYYY-MM-DD HH:MM:SS");';
 }
 
 $tmp_output .= '
@@ -107,14 +94,9 @@ $tmp_output .= '
     var graylog_grid = $("#graylog").bootgrid({
         ajax: true,
         rowCount: ['. $results_limit .', 25,50,100,250,-1],
-        formatters: {
-            "browserTime": function(column, row) {
-                return '.$timezone.'
-            }
-        },
 ';
 
-if (!isset($no_form) && $no_form !== true) {
+if (isset($no_form) && $no_form !== true) {
     $tmp_output .= '
         templates: {
             header: searchbar

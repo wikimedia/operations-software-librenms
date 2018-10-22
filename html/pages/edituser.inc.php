@@ -1,7 +1,5 @@
 <?php
 
-use LibreNMS\Authentication\LegacyAuth;
-
 $no_refresh = true;
 
 require 'includes/javascript-interfacepicker.inc.php';
@@ -10,11 +8,11 @@ echo "<div style='margin: 10px;'>";
 
 $pagetitle[] = 'Edit user';
 
-if (!LegacyAuth::user()->isAdmin()) {
+if ($_SESSION['userlevel'] != '10') {
     include 'includes/error-no-perm.inc.php';
 } else {
     if ($vars['user_id'] && !$vars['edit']) {
-        $user_data = LegacyAuth::get()->getUser($vars['user_id']);
+        $user_data = get_user($vars['user_id']);
         echo '<p><h2>'.$user_data['realname']."</h2><a href='edituser/'>Change...</a></p>";
         // Perform actions if requested
         if ($vars['action'] == 'deldevperm') {
@@ -37,7 +35,7 @@ if (!LegacyAuth::user()->isAdmin()) {
 
         if ($vars['action'] == 'addifperm') {
             if (!dbFetchCell('SELECT COUNT(*) FROM ports_perms WHERE `port_id` = ? AND `user_id` = ?', array($vars['port_id'], $vars['user_id']))) {
-                dbInsert(array('port_id' => $vars['port_id'], 'user_id' => $vars['user_id']), 'ports_perms');
+                dbInsert(array('port_id' => $vars['port_id'], 'user_id' => $vars['user_id'], 'access_level' => 0), 'ports_perms');
             }
         }
 
@@ -68,7 +66,7 @@ if (!LegacyAuth::user()->isAdmin()) {
 
         $device_perms = dbFetchRows('SELECT * from devices_perms as P, devices as D WHERE `user_id` = ? AND D.device_id = P.device_id', array($vars['user_id']));
         foreach ($device_perms as $device_perm) {
-            echo '<tr><td><strong>'.format_hostname($device_perm)."</td><td> <a href='edituser/action=deldevperm/user_id=".$vars['user_id'].'/device_id='.$device_perm['device_id']."'><i class='fa fa-trash fa-lg icon-theme' aria-hidden='true'></i></a></strong></td></tr>";
+            echo '<tr><td><strong>'.$device_perm['hostname']."</td><td> <a href='edituser/action=deldevperm/user_id=".$vars['user_id'].'/device_id='.$device_perm['device_id']."'><i class='fa fa-trash fa-lg icon-theme' aria-hidden='true'></i></a></strong></td></tr>";
             $access_list[] = $device_perm['device_id'];
             $permdone      = 'yes';
         }
@@ -243,7 +241,7 @@ if (!LegacyAuth::user()->isAdmin()) {
         </form>
         </div>";
     } elseif ($vars['user_id'] && $vars['edit']) {
-        if (LegacyAuth::user()->isDemoUser()) {
+        if ($_SESSION['userlevel'] == 11) {
             demo_account();
         } else {
             if (!empty($vars['new_level'])) {
@@ -251,10 +249,10 @@ if (!LegacyAuth::user()->isAdmin()) {
                     $vars['can_modify_passwd'] = '1';
                 }
 
-                LegacyAuth::get()->updateUser($vars['user_id'], $vars['new_realname'], $vars['new_level'], $vars['can_modify_passwd'], $vars['new_email']);
+                update_user($vars['user_id'], $vars['new_realname'], $vars['new_level'], $vars['can_modify_passwd'], $vars['new_email']);
                 print_message('User has been updated');
-                if (!empty($vars['new_pass1']) && $vars['new_pass1'] == $vars['new_pass2'] && LegacyAuth::get()->canUpdatePasswords($vars['cur_username'])) {
-                    if (LegacyAuth::get()->changePassword($vars['cur_username'], $vars['new_pass1']) == 1) {
+                if (!empty($vars['new_pass1']) && $vars['new_pass1'] == $vars['new_pass2'] && passwordscanchange($vars['cur_username'])) {
+                    if (changepassword($vars['cur_username'], $vars['new_pass1']) == 1) {
                         print_message("User password has been updated");
                     } else {
                         print_error("Password couldn't be updated");
@@ -264,7 +262,7 @@ if (!LegacyAuth::user()->isAdmin()) {
                 }
             }
 
-            $users_details = LegacyAuth::get()->getUser($vars['user_id']);
+            $users_details = get_user($vars['user_id']);
             if (!empty($users_details)) {
                 if (!empty($vars['dashboard']) && $vars['dashboard'] != $users_details['dashboard']) {
                     set_user_pref('dashboard', $vars['dashboard']);
@@ -275,7 +273,7 @@ if (!LegacyAuth::user()->isAdmin()) {
   <input type='hidden' name='cur_username' value='" . $users_details['username'] . "'>
   <input type='hidden' name='edit' value='yes'>
 ";
-                if (LegacyAuth::get()->canUpdateUsers() == '1') {
+                if (can_update_users() == '1') {
                     if (empty($vars['new_realname'])) {
                         $vars['new_realname'] = $users_details['realname'];
                     }
@@ -337,7 +335,7 @@ if (!LegacyAuth::user()->isAdmin()) {
     </div>
   </div>";
 
-                    if (LegacyAuth::get()->canUpdatePasswords($users_details['username'])) {
+                    if (passwordscanchange($users_details['username'])) {
                         echo "
         <div class='form-group'>
             <label for='new_pass1' class='col-sm-2 control-label'>Password</label>
@@ -432,7 +430,7 @@ if (!LegacyAuth::user()->isAdmin()) {
             }//end if !empty($users_details)
         }//end if
     } else {
-        $user_list = LegacyAuth::get()->getUserlist();
+        $user_list = get_userlist();
 
         echo '<h3>Select a user to edit</h3>';
 

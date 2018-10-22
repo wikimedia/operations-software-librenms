@@ -13,12 +13,10 @@
  * the source code distribution for details.
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-
 $minutes = 15;
 $seconds = ($minutes * 60);
 $top     = $config['front_page_settings']['top']['devices'];
-if (LegacyAuth::user()->hasGlobalRead()) {
+if (is_admin() === true || is_read() === true) {
     $query = "
         SELECT *, sum(p.ifInOctets_rate + p.ifOutOctets_rate) as total
         FROM ports as p, devices as d
@@ -43,7 +41,7 @@ if (LegacyAuth::user()->hasGlobalRead()) {
         ORDER BY total desc
         LIMIT $top
         ";
-    $param[] = array(LegacyAuth::id());
+    $param[] = array($_SESSION['user_id']);
 }//end if
 
 echo "<strong>Top $top devices (last $minutes minutes)</strong>\n";

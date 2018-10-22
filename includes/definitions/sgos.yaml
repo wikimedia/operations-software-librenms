@@ -1,7 +1,7 @@
 os: sgos
 text: 'BlueCoat ProxySG'
 type: network
-ifname: true
+ifname: 1
 icon: bluecoat
 mib_dir:
     - bluecoat

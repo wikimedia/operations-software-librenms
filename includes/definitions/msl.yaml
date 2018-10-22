@@ -5,16 +5,15 @@ over:
     - { graph: device_processor, text: 'Processor Usage' }
     - { graph: device_ucd_memory, text: 'Memory Usage' }
     - { graph: device_storage, text: 'Storage Usage' }
-mib_dir:
-    - mitel
+mib_dir: mitel
 discovery:
-    - sysObjectID:
+    - sysObjectId:
         - .1.3.6.1.4.1.1027.1
-processor_stacked: true
+processor_stacked: 1
 poller_modules:
-    bgp-peers: false
-    ospf: false
-    stp: false
+    bgp-peers: 0
+    ospf: 0
+    stp: 0
 discovery_modules:
-    bgp-peers: false
-    stp: false
+    bgp-peers: 0
+    stp: 0

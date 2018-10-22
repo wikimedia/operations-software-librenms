@@ -1,15 +1,17 @@
 <?php
 
-use LibreNMS\Config;
+if (!is_array($config['customers_descr'])) {
+    $config['customers_descr'] = array($config['customers_descr']);
+}
 
-$cust_descrs = (array)Config::get('customers_descr', ['cust']);
+$descr_type = "'".implode("', '", $config['customers_descr'])."'";
 
-$sql = ' FROM `ports` LEFT JOIN `devices` AS `D` ON `ports`.`device_id` = `D`.`device_id` WHERE `port_descr_type` IN ' .  dbGenPlaceholders(count($cust_descrs));
-$param = $cust_descrs;
+$i = 0;
 
+$sql = ' FROM `ports` LEFT JOIN `devices` AS `D` ON `ports`.`device_id` = `D`.`device_id` WHERE `port_descr_type` IN (?)';
+$param[] = array($descr_type);
 if (isset($searchPhrase) && !empty($searchPhrase)) {
-    $sql .= " AND (`port_descr_descr` LIKE ? OR `ifName` LIKE ? OR `ifDescr` LIKE ? OR `ifAlias` LIKE ? OR `D`.`hostname` LIKE ? OR `port_descr_speed` LIKE ? OR `port_descr_notes` LIKE ?)";
-    array_push($param, "%$searchPhrase%", "%$searchPhrase%", "%$searchPhrase%", "%$searchPhrase%", "%$searchPhrase%", "%$searchPhrase%", "%$searchPhrase%");
+    $sql .= " AND (`port_descr_descr` LIKE '%$searchPhrase%' OR `ifName` LIKE '%$searchPhrase%' OR `ifDescr` LIKE '%$searchPhrase%' OR `ifAlias` LIKE '%$searchPhrase%' OR `D`.`hostname` LIKE '%$searchPhrase%' OR `port_descr_speed` LIKE '%$searchPhrase%' OR `port_descr_notes` LIKE '%$searchPhrase%')";
 }
 
 $count_sql = "SELECT COUNT(DISTINCT(`port_descr_descr`)) $sql";
@@ -39,13 +41,11 @@ if ($rowCount != -1) {
 $sql = "SELECT `port_descr_descr` $sql";
 
 foreach (dbFetchRows($sql, $param) as $customer) {
+    $i++;
+
     $customer_name = $customer['port_descr_descr'];
 
-    $port_query = 'SELECT * FROM `ports` WHERE `port_descr_type` IN ' . dbGenPlaceholders(count($cust_descrs)) .  ' AND `port_descr_descr` = ?';
-    $port_params = $cust_descrs;
-    $port_params[] = $customer_name;
-
-    foreach (dbFetchRows($port_query, $port_params) as $port) {
+    foreach (dbFetchRows('SELECT * FROM `ports` WHERE `port_descr_type` IN (?) AND `port_descr_descr` = ?', array(array($descr_type), $customer['port_descr_descr'])) as $port) {
         $device = device_by_id_cache($port['device_id']);
 
         $ifname  = fixifname($device['ifDescr']);

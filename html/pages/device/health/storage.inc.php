@@ -6,9 +6,9 @@ $row = 1;
 
 foreach (dbFetchRows('SELECT * FROM `storage` WHERE device_id = ? ORDER BY storage_descr', array($device['device_id'])) as $drive) {
     if (is_integer($row / 2)) {
-        $row_colour = $config['list_colour']['even'];
+        $row_colour = $list_colour_a;
     } else {
-        $row_colour = $config['list_colour']['odd'];
+        $row_colour = $list_colour_b;
     }
 
     $total = $drive['storage_size'];

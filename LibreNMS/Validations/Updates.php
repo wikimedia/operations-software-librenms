@@ -29,10 +29,11 @@ use DateTime;
 use DateTimeZone;
 use Exception;
 use LibreNMS\Config;
+use LibreNMS\Interfaces\ValidationGroup;
 use LibreNMS\ValidationResult;
 use LibreNMS\Validator;
 
-class Updates extends BaseValidation
+class Updates implements ValidationGroup
 {
     public function validate(Validator $validator)
     {
@@ -61,17 +62,10 @@ class Updates extends BaseValidation
             }
 
             if ($versions['local_branch'] != 'master') {
-                if ($versions['local_branch'] == 'php53') {
-                    $validator->warn(
-                        "You are on the PHP 5.3 support branch, this will prevent automatic updates.",
-                        "Update to PHP 5.6.4 or newer (PHP 7.1 recommended) to continue to receive updates."
-                    );
-                } else {
-                    $validator->warn(
-                        "Your local git branch is not master, this will prevent automatic updates.",
-                        "You can switch back to master with git checkout master"
-                    );
-                }
+                $validator->warn(
+                    "Your local git branch is not master, this will prevent automatic updates.",
+                    "You can switch back to master with git checkout master"
+                );
             }
         }
 
@@ -88,5 +82,15 @@ class Updates extends BaseValidation
             $result->setList('Modified Files', $cmdoutput);
             $validator->result($result);
         }
+    }
+
+    /**
+     * Returns if this test should be run by default or not.
+     *
+     * @return bool
+     */
+    public function isDefault()
+    {
+        return true;
     }
 }

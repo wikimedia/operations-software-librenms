@@ -1,17 +1,18 @@
 os: toshiba-tec
 group: printer
 text: 'Toshiba Printer'
-ifname: true
+ifname: 1
 type: printer
-icon: toshiba
+logo: toshiba
 over:
     - { graph: device_toner, text: Toner }
 discovery:
-    - sysObjectID:
+    - sysObjectId:
         - .1.3.6.1.4.1.1129.1.2.
     - sysDescr:
-        - 'TOSHIBA e-STUDIO'
+        - TOSHIBA e-STUDIO
+
 discovery_modules:
-    toner: true
+    toner: 1
 poller_modules:
-    toner: true
+    toner: 1

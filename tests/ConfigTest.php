@@ -26,9 +26,8 @@
 namespace LibreNMS\Tests;
 
 use LibreNMS\Config;
-use LibreNMS\DB\Eloquent;
 
-class ConfigTest extends TestCase
+class ConfigTest extends \PHPUnit_Framework_TestCase
 {
     public function testGetBasic()
     {
@@ -118,24 +117,6 @@ class ConfigTest extends TestCase
         Config::set('you.and.me', "I'll be there");
 
         $this->assertEquals("I'll be there", $config['you']['and']['me']);
-    }
-
-    public function testSetPersist()
-    {
-        $this->dbSetUp();
-
-        $key = 'testing.persist';
-
-        $query = Eloquent::DB()->table('config')->where('config_name', $key);
-
-        $query->delete();
-        $this->assertFalse($query->exists(), "$key should not be set, clean database");
-        Config::set($key, 'one', true);
-        $this->assertEquals('one', $query->value('config_value'));
-        Config::set($key, 'two', true);
-        $this->assertEquals('two', $query->value('config_value'));
-
-        $this->dbTearDown();
     }
 
     public function testHas()

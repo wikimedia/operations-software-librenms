@@ -37,6 +37,6 @@ if (empty($hardware)) {
 }
 
 if (empty($version)) {
-    $explodeddata = explode(" ", $device['sysDescr']);
+    $explodeddata = explode(" ", $poll_device['sysDescr']);
     $version = $explodeddata['5'];
 }

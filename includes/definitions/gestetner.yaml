@@ -9,8 +9,8 @@ discovery:
     - sysDescr:
         - Gestetner Network Printer
 discovery_modules:
-    toner: true
-    mempools: false
+    toner: 1
+    mempools: 0
 poller_modules:
-    toner: true
-    mempools: false
+    toner: 1
+    mempools: 0

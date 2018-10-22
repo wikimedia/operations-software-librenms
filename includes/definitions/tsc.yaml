@@ -2,8 +2,8 @@ os: tsc
 group: printer
 text: 'TSC Printer'
 icon: tsc
-ifname: true
+ifname: 1
 type: printer
 discovery:
-    - sysObjectID:
+    - sysObjectId:
         - .1.3.6.1.4.1.51966.

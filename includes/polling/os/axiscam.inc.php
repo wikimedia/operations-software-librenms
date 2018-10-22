@@ -12,7 +12,7 @@
  * the source code distribution for details.
  */
 
-$data = explode('; ', $device['sysDescr']);
+$data = explode('; ', $poll_device['sysDescr']);
 
 if (isset($data[1])) {
     $hardware = $data[1];

@@ -26,9 +26,10 @@
 namespace LibreNMS\Validations;
 
 use LibreNMS\Config;
+use LibreNMS\Interfaces\ValidationGroup;
 use LibreNMS\Validator;
 
-class Rrd extends BaseValidation
+class Rrd implements ValidationGroup
 {
     /**
      * Validate this module.
@@ -84,5 +85,15 @@ class Rrd extends BaseValidation
                 $validator->fail('Cannot connect to rrdcached instance');
             }
         }
+    }
+
+    /**
+     * Returns if this test should be run by default or not.
+     *
+     * @return bool
+     */
+    public function isDefault()
+    {
+        return true;
     }
 }

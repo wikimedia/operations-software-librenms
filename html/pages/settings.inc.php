@@ -24,8 +24,7 @@
  * @author     f0o <f0o@devilcode.org>
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-
+$config['memcached']['enable'] = false;
 ?>
 
 <div class="container-fluid">
@@ -42,7 +41,7 @@ use LibreNMS\Authentication\LegacyAuth;
 <?php
 
 
-if (LegacyAuth::user()->hasGlobalAdmin()) {
+if (is_admin() === true) {
     echo '<ul class="nav nav-tabs">';
     $pages = dbFetchRows("SELECT DISTINCT `config_group` FROM `config` WHERE `config_group` IS NOT NULL AND `config_group` != ''");
     array_unshift($pages, array('config_group' => 'Global')); // Add Global tab
@@ -105,7 +104,7 @@ if (LegacyAuth::user()->hasGlobalAdmin()) {
 
         echo '<div class="table-responsive">' . a2t($config) . '</div>';
 
-        if ($debug && LegacyAuth::user()->hasGlobalAdmin()) {
+        if ($debug && $_SESSION['userlevel'] >= '10') {
             echo("<pre>");
             print_r($config);
             echo("</pre>");

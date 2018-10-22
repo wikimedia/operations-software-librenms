@@ -108,7 +108,7 @@ if ($device['os_group'] == 'unix') {
                 }
             }
             if (count($data) > 0) {
-                dbBulkInsert($data, 'processes');
+                dbBulkInsert('processes', $data);
             }
             echo "\n";
         }

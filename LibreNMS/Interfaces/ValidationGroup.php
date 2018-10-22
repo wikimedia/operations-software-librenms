@@ -43,18 +43,4 @@ interface ValidationGroup
      * @return bool
      */
     public function isDefault();
-
-    /**
-     * Returns true if this group has been run
-     *
-     * @return bool
-     */
-    public function isCompleted();
-
-    /**
-     * Mark this group as completed
-     *
-     * @return void
-     */
-    public function markCompleted();
 }

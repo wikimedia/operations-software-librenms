@@ -3,8 +3,8 @@ $name = 'smart';
 $app_id = $app['app_id'];
 $unit_text     = '';
 $unitlen       = 10;
-$bigdescrlen   = 25;
-$smalldescrlen = 25;
+$bigdescrlen   = 10;
+$smalldescrlen = 10;
 $colours       = 'mega';
 $dostack       = 0;
 $printtotal    = 0;
@@ -16,27 +16,27 @@ $rrd_filename = rrd_name($device['hostname'], array('app', $name, $app_id, $vars
 if (rrdtool_check_rrd_exists($rrd_filename)) {
     $rrd_list[]=array(
         'filename' => $rrd_filename,
-        'descr'    => 'Spin_Retry_Count',
+        'descr'    => 'ID# 10',
         'ds'       => 'id10',
     );
     $rrd_list[]=array(
         'filename' => $rrd_filename,
-        'descr'    => 'Runtime_Bad_Block',
+        'descr'    => 'ID# 183',
         'ds'       => 'id183',
     );
     $rrd_list[]=array(
         'filename' => $rrd_filename,
-        'descr'    => 'End-to-End_Error',
+        'descr'    => 'ID# 184',
         'ds'       => 'id184',
     );
     $rrd_list[]=array(
         'filename' => $rrd_filename,
-        'descr'    => 'Reallocated_Event_Count',
+        'descr'    => 'ID# 196',
         'ds'       => 'id197',
     );
     $rrd_list[]=array(
         'filename' => $rrd_filename,
-        'descr'    => 'UDMA_CRC_Error_Count',
+        'descr'    => 'ID# 199',
         'ds'       => 'id199',
     );
 }

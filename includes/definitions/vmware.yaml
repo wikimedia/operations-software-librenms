@@ -1,11 +1,11 @@
 os: vmware
 type: server
 text: VMware
-ifXmcbc: true
+ifXmcbc: 1
 over:
     - { graph: device_bits, text: 'Device Traffic' }
 discovery_modules:
-    vmware-vminfo: true
+    vmware-vminfo: 1
 discovery:
     - sysDescr_regex:
         - '/^VMware ESX/'

@@ -1,7 +1,7 @@
 <?php
 
 // Format of sysDescr is hardware model followed by version followed by build date
-$tempstr = substr($device['sysDescr'], 0, strrpos($device['sysDescr'], ' '));
+$tempstr = substr($poll_device['sysDescr'], 0, strrpos($poll_device['sysDescr'], ' '));
 $version = trim(substr($tempstr, strrpos($tempstr, ' ')));
 $hardware = trim(substr($tempstr, 0, strrpos($tempstr, ' ')));
 

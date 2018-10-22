@@ -64,6 +64,9 @@ foreach ($port_stats as $ifIndex => $port) {
         } else {
             echo '.';
         }
+
+        // We've seen it. Remove it from the cache.
+        unset($ports_l[$ifIndex]);
     } else {
         // Port vanished (mark as deleted)
         if (is_array($ports_db[$port_id])) {
@@ -83,6 +86,17 @@ unset(
     $port
 );
 
+// End New interface detection
+// Interface Deletion
+// If it's in our $ports_l list, that means it's not been seen. Mark it deleted.
+foreach ($ports_l as $ifIndex => $port_id) {
+    if ($ports_db[$ifIndex]['deleted'] == '0') {
+        dbUpdate(array('deleted' => '1'), 'ports', '`port_id` = ?', array($port_id));
+        echo '-'.$ifIndex;
+    }
+}
+
+// End interface deletion
 echo "\n";
 
 // Clear Variables Here

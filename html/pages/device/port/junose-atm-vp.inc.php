@@ -14,9 +14,9 @@ echo '<table cellspacing="0" cellpadding="5" border="0">';
 
 foreach (dbFetchRows('SELECT * FROM juniAtmVp WHERE port_id = ?', array($interface['port_id'])) as $vp) {
     if (is_integer($row / 2)) {
-        $row_colour = $config['list_colour']['even'];
+        $row_colour = $list_colour_a;
     } else {
-        $row_colour = $config['list_colour']['odd'];
+        $row_colour = $list_colour_b;
     }
 
     echo '<tr bgcolor="'.$row_colour.'">';

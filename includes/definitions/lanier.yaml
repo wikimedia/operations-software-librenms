@@ -9,6 +9,7 @@ discovery:
     - sysDescr:
         - LANIER
 discovery_modules:
-    toner: true
+    toner: 1
 poller_modules:
-    toner: true
+    toner: 1
+

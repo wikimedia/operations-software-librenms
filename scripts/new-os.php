@@ -9,7 +9,14 @@ $options = getopt('h:o:t:v:d::');
 if ($options['h'] && $options['o'] && $options['t'] && $options['v']) {
     $type = $options['t'];
     $vendor = $options['v'];
-    set_debug(isset($options['d']));
+    if (isset($options['d'])) {
+        $debug = true;
+        $vdebug = true;
+        ini_set('display_errors', 1);
+        ini_set('display_startup_errors', 1);
+        ini_set('log_errors', 1);
+        ini_set('error_reporting', 1);
+    }
 
     $device_id = ctype_digit($options['h']) ? $options['h'] : getidbyname($options['h']);
     $device = device_by_id_cache($device_id);
@@ -20,14 +27,14 @@ if ($options['h'] && $options['o'] && $options['t'] && $options['v']) {
         c_echo("The OS {$options['o']} appears to exist already, skipping to sensors support\n");
     } else {
         $sysDescr = snmp_get($device, 'sysDescr.0', '-OvQ', 'SNMPv2-MIB');
-        $sysObjectID = explode('.', ltrim(snmp_get($device, 'sysObjectID.0', '-OnvQ', 'SNMPv2-MIB'), '.'));
-        $end_oid = array_pop($sysObjectID);
-        $sysObjectID = '.' . implode('.', $sysObjectID);
-        $full_sysObjectID = "$sysObjectID.$end_oid";
+        $sysObjectId = explode('.', ltrim(snmp_get($device, 'sysObjectID.0', '-OnvQ', 'SNMPv2-MIB'), '.'));
+        $end_oid = array_pop($sysObjectId);
+        $sysObjectId = '.' . implode('.', $sysObjectId);
+        $full_sysObjectId = "$sysObjectId.$end_oid";
 
         c_echo("
 sysDescr: $sysDescr
-sysObjectID: $full_sysObjectID
+sysObjectID: $full_sysObjectId
 
 ");
 
@@ -37,7 +44,7 @@ sysObjectID: $full_sysObjectID
             $continue = get_user_input("We already detect this device as OS $os type, do you want to continue to add sensors? (Y/n)");
         }
 
-        if (!str_i_contains($continue, 'y')) {
+        if (!str_contains($continue, 'y', true)) {
             $descr = get_user_input('Enter the description for this OS, i.e Cisco IOS:');
             $icon = get_user_input('Enter the logo to use, this can be the name of an existing one (i.e: cisco) or the url to retrieve one:');
 
@@ -64,13 +71,13 @@ over:
     - { graph: device_processor, text: 'CPU Usage' }
     - { graph: device_mempool, text: 'Memory Usage' }
 discovery:
-    - sysObjectID:
-        - $sysObjectID
+    - sysObjectId:
+        - $sysObjectId
 ";
             file_put_contents($definition_file, $disco);
 
             $snmprec = "1.3.6.1.2.1.1.1.0|4|$sysDescr
-1.3.6.1.2.1.1.2.0|6|$full_sysObjectID
+1.3.6.1.2.1.1.2.0|6|$full_sysObjectId
 ";
 
             file_put_contents($test_file, $snmprec);

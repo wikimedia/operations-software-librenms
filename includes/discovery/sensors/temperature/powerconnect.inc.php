@@ -1,6 +1,7 @@
 <?php
 
-switch ($device['sysObjectID']) {
+$sysObjectId = snmp_get($device, 'SNMPv2-MIB::sysObjectID.0', '-Ovqn');
+switch ($sysObjectId) {
     /**
         * Dell Powerconnect 5548
         * Operating Temperature: 0º C to 45º C

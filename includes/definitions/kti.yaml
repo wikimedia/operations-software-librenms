@@ -2,7 +2,7 @@ os: kti
 text: KTI
 type: network
 icon: kti
-ifname: true
+ifname: 1
 over:
     - { graph: device_bits, text: 'Device Traffic' }
 discovery:

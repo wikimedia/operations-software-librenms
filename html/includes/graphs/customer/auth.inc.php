@@ -1,9 +1,7 @@
 <?php
 
 // FIXME - wtfbbq
-use LibreNMS\Authentication\LegacyAuth;
-
-if (LegacyAuth::user()->hasGlobalRead() || $auth) {
+if ($_SESSION['userlevel'] >= '5' || $auth) {
     $id    = mres($vars['id']);
     $title = generate_device_link($device);
     $auth  = true;

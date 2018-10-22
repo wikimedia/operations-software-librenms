@@ -7,6 +7,6 @@ over:
 icon: watchguard
 group: watchguard
 discovery:
-    - sysObjectID:
+    - sysObjectId:
         - .1.3.6.1.4.1.3097.1.4
         - .1.3.6.1.4.1.3097.1.5

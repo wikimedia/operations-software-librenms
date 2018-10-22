@@ -12,9 +12,7 @@
  * the source code distribution for details.
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-
-if (LegacyAuth::user()->hasGlobalAdmin()) {
+if (is_admin() !== false) {
 ?>
 
 <div class="modal fade bs-example-modal-sm" id="schedule-maintenance" tabindex="-1" role="dialog" aria-labelledby="Create" aria-hidden="true">
@@ -48,7 +46,7 @@ if (LegacyAuth::user()->hasGlobalAdmin()) {
                     </div>
                     <div class="form-group">
                         <label for="recurring" class="col-sm-4 control-label">Recurring <strong class="text-danger">*</strong>: </label>
-                        <div class="col-sm-8">
+                        <div class="col-sm-8"> 
                             <label class="radio-inline">
                                 <input type="radio" id="recurring0" name="recurring" value="0" checked="checked"/> No
                             </label>
@@ -177,11 +175,11 @@ $('#schedule-maintenance').on('show.bs.modal', function (event) {
                 $('#notes').val(output['notes']);
                 if (output['recurring'] == 0){
                     $('#start').val(output['start']);
-                    $('#end').val(output['end']);
+                    $('#end').val(output['end']);                    
 
                     $('#norecurringgroup').show();
                     $('#recurringgroup').hide();
-
+                    
                     $('#start_recurring_dt').val('');
                     $('#end_recurring_dt').val('');
                     $('#start_recurring_hr').val('');
@@ -189,13 +187,13 @@ $('#schedule-maintenance').on('show.bs.modal', function (event) {
                     $("#recurring0").prop("checked", true);
                     $('#recurring_day').prop('checked', false);
                 }else{
-
+                    
                     $('#start_recurring_dt').val(output['start_recurring_dt']);
                     $('#end_recurring_dt').val(output['end_recurring_dt']);
                     $('#start_recurring_hr').val(output['start_recurring_hr']);
                     $('#end_recurring_hr').val(output['end_recurring_hr']);
                     $("#recurring1").prop("checked", true);
-
+                    
                     var recdayupd = output['recurring_day'];
                     if (recdayupd != ''){
                         var arrayrecdayupd = recdayupd.split(',');
@@ -203,12 +201,12 @@ $('#schedule-maintenance').on('show.bs.modal', function (event) {
                             $("input[name='recurring_day[]'][value="+checkedday+"]").prop('checked', true);
                         });
                     }else{
-                        $('#recurring_day').prop('checked', false);
+                        $('#recurring_day').prop('checked', false);                        
                     }
-
+                    
                     $('#norecurringgroup').hide();
                     $('#recurringgroup').show();
-
+                    
                     $('#start').val('');
                     $('#end').val('');
                 }
@@ -219,7 +217,7 @@ $('#schedule-maintenance').on('show.bs.modal', function (event) {
 });
 
 $('#sched-form input[name=recurring]').on('change', function() {
-    var isrecurring = $('input[name=recurring]:checked', '#sched-form').val();
+    var isrecurring = $('input[name=recurring]:checked', '#sched-form').val(); 
     if (isrecurring == 1){
         $('#norecurringgroup').hide();
         $('#recurringgroup').show();

@@ -15,7 +15,7 @@
  * the source code distribution for details.
  */
 
-$productmib = trim($device['sysObjectID'], '" ');
+$productmib = trim($poll_device['sysObjectId'], '" ');
 
 $ruckusmodels    = array(
     "$productmib.5.0",

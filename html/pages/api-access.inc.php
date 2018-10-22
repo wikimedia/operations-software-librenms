@@ -12,11 +12,7 @@
  * the source code distribution for details.
  */
 
-use App\Models\ApiToken;
-use App\Models\User;
-use LibreNMS\Authentication\LegacyAuth;
-
-if (LegacyAuth::user()->hasGlobalAdmin()) {
+if (is_admin() === true) {
     if (empty($_POST['token'])) {
         $_POST['token'] = bin2hex(openssl_random_pseudo_bytes(16));
     }
@@ -58,8 +54,8 @@ if (LegacyAuth::user()->hasGlobalAdmin()) {
               <div class="col-sm-4">
                 <select class="form-control" id="user_id" name="user_id">
 <?php
-foreach ($userlist = User::all() as $user) {
-    echo '<option value="' . $user->user_id . '">' . $user->username . ' (' . $user->auth_type . ')</option>';
+foreach ($userlist = get_userlist() as $users) {
+    echo '<option value="'.$users['user_id'].'">'.$users['username'].'</option>';
 }
 
 ?>
@@ -132,7 +128,6 @@ echo '
       <table class="table table-bordered table-condensed">
         <tr>
           <th>User</th>
-          <th>Auth</th>
           <th>Token Hash</th>
           <th>QR Code</th>
           <th>Description</th>
@@ -141,21 +136,25 @@ echo '
         </tr>
 ';
 
-foreach (ApiToken::all() as $api) {
-    $user_details = $userlist->where('user_id', $api->user_id)->first();
-
-    $api_disabled = $api->disabled == 1 ? 'checked' : '';
-    $color = $user_details->auth_type == LegacyAuth::getType() ? '' : 'bgcolor="lightgrey"';
-
+foreach (dbFetchRows('SELECT * FROM `api_tokens` ORDER BY user_id') as $api) {
+    if ($api['disabled'] == '1') {
+        $api_disabled = 'checked';
+    } else {
+        $api_disabled = '';
+    }
+    foreach ($userlist as $tmp_user) {
+        if ($tmp_user['user_id'] === $api['user_id']) {
+            $user_details = $tmp_user;
+        }
+    }
     echo '
-        <tr id="'.$api->id.'" ' . $color . '>
-          <td>'.$user_details->username.'</td>
-          <td>'.$user_details->auth_type.'</td>
-          <td>'.$api->token_hash.'</td>
-          <td><button class="btn btn-info btn-xs" data-toggle="modal" data-target="#display-qr" data-token_hash="'.$api->token_hash.'"><i class="fa fa-qrcode" ></i></button></td>
-          <td>'.$api->description.'</td>
-          <td><input type="checkbox" name="token-status" data-token_id="'.$api->id.'" data-off-text="No" data-on-text="Yes" data-on-color="danger" '.$api_disabled.' data-size="mini"></td>
-          <td><button type="button" class="btn btn-danger btn-xs" id="'.$api->id.'" data-token_id="'.$api->id.'" data-toggle="modal" data-target="#confirm-delete">Delete</button></td>
+        <tr id="'.$api['id'].'">
+          <td>'.$user_details['username'].'</td>
+          <td>'.$api['token_hash'].'</td>
+          <td><button class="btn btn-info btn-xs" data-toggle="modal" data-target="#display-qr" data-token_hash="'.$api['token_hash'].'"><i class="fa fa-qrcode" ></i></button></td>
+          <td>'.$api['description'].'</td>
+          <td><input type="checkbox" name="token-status" data-token_id="'.$api['id'].'" data-off-text="No" data-on-text="Yes" data-on-color="danger" '.$api_disabled.' data-size="mini"></td>
+          <td><button type="button" class="btn btn-danger btn-xs" id="'.$api['id'].'" data-token_id="'.$api['id'].'" data-toggle="modal" data-target="#confirm-delete">Delete</button></td>
         </tr>
 ';
 }

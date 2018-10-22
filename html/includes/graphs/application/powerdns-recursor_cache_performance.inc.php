@@ -27,7 +27,7 @@ include 'powerdns-recursor.inc.php';
 $colours = 'mixed';
 $unit_text = 'Packets/sec';
 
-if (rrdtool_check_rrd_exists($rrd_filename)) {
+if (is_file($rrd_filename)) {
     $rrd_list = array(
         array(
             'filename' => $rrd_filename,

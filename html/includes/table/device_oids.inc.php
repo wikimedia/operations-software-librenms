@@ -27,7 +27,7 @@ $columns = array(
 
 
 $params = array(
-    $vars['device_id'],
+    $_POST['device_id'],
 );
 
 // start of sql definition

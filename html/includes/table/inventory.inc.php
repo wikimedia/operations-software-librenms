@@ -1,46 +1,44 @@
 <?php
 
-use LibreNMS\Authentication\LegacyAuth;
-
 $where = '1';
 $param = array();
 
 
 
-if (LegacyAuth::user()->hasGlobalRead()) {
+if ($_SESSION['userlevel'] >= '5') {
     $sql = " FROM entPhysical AS E, devices AS D WHERE $where AND D.device_id = E.device_id";
 } else {
     $sql     = " FROM entPhysical AS E, devices AS D, devices_perms AS P WHERE $where AND D.device_id = E.device_id AND P.device_id = D.device_id AND P.user_id = ?";
-    $param[] = LegacyAuth::id();
+    $param[] = $_SESSION['user_id'];
 }
 
 if (isset($searchPhrase) && !empty($searchPhrase)) {
     $sql .= " AND (`D`.`hostname` LIKE '%$searchPhrase%' OR `E`.`entPhysicalDescr` LIKE '%$searchPhrase%' OR `E`.`entPhysicalModelName` LIKE '%$searchPhrase%' OR `E`.`entPhysicalSerialNum` LIKE '%$searchPhrase%')";
 }
 
-if (isset($vars['string']) && strlen($vars['string'])) {
+if (isset($_POST['string']) && strlen($_POST['string'])) {
     $sql    .= ' AND E.entPhysicalDescr LIKE ?';
-    $param[] = '%'.$vars['string'].'%';
+    $param[] = '%'.$_POST['string'].'%';
 }
 
-if (isset($vars['device_string']) && strlen($vars['device_string'])) {
+if (isset($_POST['device_string']) && strlen($_POST['device_string'])) {
     $sql    .= ' AND D.hostname LIKE ?';
-    $param[] = '%'.$vars['device_string'].'%';
+    $param[] = '%'.$_POST['device_string'].'%';
 }
 
-if (isset($vars['part']) && strlen($vars['part'])) {
+if (isset($_POST['part']) && strlen($_POST['part'])) {
     $sql    .= ' AND E.entPhysicalModelName = ?';
-    $param[] = $vars['part'];
+    $param[] = $_POST['part'];
 }
 
-if (isset($vars['serial']) && strlen($vars['serial'])) {
+if (isset($_POST['serial']) && strlen($_POST['serial'])) {
     $sql    .= ' AND E.entPhysicalSerialNum LIKE ?';
-    $param[] = '%'.$vars['serial'].'%';
+    $param[] = '%'.$_POST['serial'].'%';
 }
 
-if (isset($vars['device']) && is_numeric($vars['device'])) {
+if (isset($_POST['device']) && is_numeric($_POST['device'])) {
     $sql    .= ' AND D.device_id = ?';
-    $param[] = $vars['device'];
+    $param[] = $_POST['device'];
 }
 
 $count_sql = "SELECT COUNT(`entPhysical_id`) $sql";

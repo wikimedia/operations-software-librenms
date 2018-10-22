@@ -8,8 +8,8 @@ over:
 mib_dir:
     - citrix
 poller_modules:
-    netscaler-vsvr: false
+    netscaler-vsvr: 0
 discovery:
-    - sysObjectID:
+    - sysObjectId:
         - .1.3.6.1.4.1.5951.1
         - .1.3.6.1.4.1.5951.6

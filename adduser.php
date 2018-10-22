@@ -12,18 +12,16 @@
  *
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-
 $init_modules = array();
 if (php_sapi_name() != 'cli') {
     $init_modules[] = 'auth';
 }
 require __DIR__ . '/includes/init.php';
 
-if (LegacyAuth::get()->canManageUsers()) {
+if (auth_usermanagement()) {
     if (isset($argv[1]) && isset($argv[2]) && isset($argv[3])) {
-        if (!LegacyAuth::get()->userExists($argv[1])) {
-            if (LegacyAuth::get()->addUser($argv[1], $argv[2], $argv[3], @$argv[4])) {
+        if (!user_exists($argv[1])) {
+            if (adduser($argv[1], $argv[2], $argv[3], @$argv[4])) {
                 echo 'User '.$argv[1]." added successfully\n";
             }
         } else {

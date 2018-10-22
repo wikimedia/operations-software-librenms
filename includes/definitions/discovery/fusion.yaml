@@ -5,7 +5,7 @@ modules:
             data:
                 - oid:
                     - portTransceiverThresholdInfoTable
-                    - portName
+                    - portTable
         voltage:
             data:
                 -

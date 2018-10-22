@@ -1,5 +1,5 @@
 os: apsoluteos
-text: ApsoluteOS
+text: 'ApsoluteOS'
 type: network
 icon: radware
 group: radware
@@ -10,5 +10,5 @@ over:
     - { graph: device_processor, text: 'CPU Usage' }
     - { graph: device_mempool, text: 'Memory Usage' }
 discovery:
-    - sysObjectID:
+    - sysObjectId:
         - .1.3.6.1.4.1.89.1.1.62

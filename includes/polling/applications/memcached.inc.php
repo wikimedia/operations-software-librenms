@@ -14,6 +14,7 @@ if (!empty($agent_data['app']['memcached'])) {
     $data    = reset($result);
 }
 
+update_application($app, $data['pid']);
 echo ' memcached('.$app['app_instance'].')';
 
 $rrd_name = array('app', $name, $app_id);
@@ -60,4 +61,3 @@ $fields = array(
 
 $tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
 data_update($device, 'app', $tags, $fields);
-update_application($app, $data, $fields);

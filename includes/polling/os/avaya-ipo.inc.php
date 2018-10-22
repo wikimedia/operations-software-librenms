@@ -7,4 +7,4 @@ if (strstr($physDevice, 'Avaya IP Office')) {
     $hardware = $physDevice;
 }
 
-$version = $device['sysDescr'];
+$version = $poll_device['sysDescr'];

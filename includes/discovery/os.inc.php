@@ -1,22 +1,18 @@
 <?php
 
 use LibreNMS\Config;
-use LibreNMS\OS;
 
-$os_name = getHostOS($device);
+$os = getHostOS($device);
+if ($os != $device['os']) {
+    log_event('Device OS changed ' . $device['os'] . " => $os", $device, 'system', 3);
+    $device['os'] = $os;
+    $sql = dbUpdate(array('os' => $os), 'devices', 'device_id=?', array($device['device_id']));
 
-if ($os_name != $device['os']) {
-    log_event('Device OS changed ' . $device['os'] . " => $os_name", $device, 'system', 3);
-    $device['os'] = $os_name;
-    $sql = dbUpdate(array('os' => $os_name), 'devices', 'device_id=?', array($device['device_id']));
+    if (!Config::has("os.{$device['os']}")) {
+        load_os($device);
+    }
 
-    load_os($device);
-    load_discovery($device);
-    $os = OS::make($device);
-
-    echo "Changed ";
+    echo "Changed OS! : $os\n";
 }
-
-echo "OS: " . Config::getOsSetting($os_name, 'text') . " ($os_name)\n";
 
 update_device_logo($device);

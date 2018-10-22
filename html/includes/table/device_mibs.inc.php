@@ -22,11 +22,11 @@ $columns = array(
     'last_modified',
 );
 
-if (isset($vars['device_id'])) {
+if (isset($_POST['device_id'])) {
     // device_id supplied - get details for a single device
     // used by device MIB page
     $params = array(
-        $vars['device_id'],
+        $_POST['device_id'],
     );
     $sql = 'SELECT * FROM `device_mibs`';
     $wheresql = ' WHERE `device_id` = ?';
@@ -78,7 +78,7 @@ foreach (dbFetchRows($sql, $params) as $mib) {
     foreach ($columns as $col) {
         $mibrow[$col] = $mib[$col];
     }
-    if (!isset($vars['device_id'])) {
+    if (!isset($_POST['device_id'])) {
         $device = device_by_id_cache($mib['device_id']);
         $mibrow['hostname'] = generate_device_link(
             $device,

@@ -26,13 +26,11 @@
 namespace LibreNMS\OS;
 
 use LibreNMS\Device\WirelessSensor;
-use LibreNMS\Interfaces\Discovery\ProcessorDiscovery;
 use LibreNMS\Interfaces\Discovery\Sensors\WirelessClientsDiscovery;
 use LibreNMS\Interfaces\Discovery\Sensors\WirelessRssiDiscovery;
 use LibreNMS\OS;
-use LibreNMS\OS\Shared\Cisco;
 
-class Ios extends Cisco implements
+class Ios extends OS implements
     WirelessClientsDiscovery,
     WirelessRssiDiscovery
 {

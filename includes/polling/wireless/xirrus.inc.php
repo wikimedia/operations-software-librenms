@@ -1,7 +1,30 @@
 <?php
 use LibreNMS\RRD\RrdDefinition;
 
+$radios = snmpwalk_cache_oid($device, 'XIRRUS-MIB::realtimeMonitorIfaceName', array(), 'XIRRUS-MIB');
+$rssi = snmpwalk_cache_oid($device, 'XIRRUS-MIB::realtimeMonitorAverageRSSI', array(), 'XIRRUS-MIB');
+$dataRate = snmpwalk_cache_oid($device, 'XIRRUS-MIB::realtimeMonitorAverageDataRate', array(), 'XIRRUS-MIB');
+$noiseFloor = snmpwalk_cache_oid($device, 'XIRRUS-MIB::realtimeMonitorNoiseFloor', array(), 'XIRRUS-MIB');
 $associations=array();
+
+foreach ($radios as $idx => $radio) {
+    $radioName = $radio['realtimeMonitorIfaceName'];
+    $associations[$radioName]=0;
+
+    $measurement = 'xirrus_stats';
+    $rrd_name = array($measurement, $radioName);
+    $rrd_def = RrdDefinition::make()
+        ->addDataset('rssi', 'GAUGE', -150, 0)
+        ->addDataset('dataRate', 'GAUGE', 0, 1400)
+        ->addDataset('noiseFloor', 'GAUGE', -150, 0);
+    $fields = array(
+        'rssi' => $rssi[$idx]['realtimeMonitorAverageRSSI'],
+        'dataRate' => $dataRate[$idx]['realtimeMonitorAverageDataRate'],
+        'noiseFloor' => $noiseFloor[$idx]['realtimeMonitorNoiseFloor']
+    );
+    $tags = compact('radioName', 'rrd_name', 'rrd_def');
+    data_update($device, $measurement, $tags, $fields);
+}
 
 // if this config flag is true, don't poll for stations
 // this in case of large APs which may have many stations
@@ -12,7 +35,7 @@ if ($config['xirrus_disable_stations']!=true) {
     $assoc = snmpwalk_cache_oid($device, 'XIRRUS-MIB::stationAssociationIAP', array(), 'XIRRUS-MIB');
     foreach ($assoc as $s) {
         $radio = array_pop($s);
-        $associations[$radio] = (int)$associations[$radio] + 1;
+        $associations[$radio]++;
     }
     unset($radio);
     unset($assoc);
@@ -32,5 +55,10 @@ if ($config['xirrus_disable_stations']!=true) {
     $graphs['xirrus_stations'] = false;
 }
 
+$graphs['xirrus_rssi'] = true;
+$graphs['xirrus_dataRates'] = true;
+$graphs['xirrus_noiseFloor'] = true;
+$graphs['xirrus_stations'] = true;
+
 // cleanup
-unset($rrd_def, $associations, $tags, $fields, $measurement);
+unset($rrd_def, $radios, $rssi, $radioName, $associations, $tags, $fields, $measurement);

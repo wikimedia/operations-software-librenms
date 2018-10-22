@@ -56,9 +56,9 @@ echo "<div style='margin: 5px;'><table border=0 cellspacing=0 cellpadding=0 widt
 $i = '0';
 foreach (dbFetchRows('SELECT * FROM `loadbalancer_vservers` WHERE `device_id` = ? ORDER BY `classmap`', array($device['device_id'])) as $vserver) {
     if (is_integer($i / 2)) {
-        $bg_colour = $config['list_colour']['even'];
+        $bg_colour = $list_colour_a;
     } else {
-        $bg_colour = $config['list_colour']['odd'];
+        $bg_colour = $list_colour_b;
     }
 
     if ($vserver['serverstate'] == 'inService') {

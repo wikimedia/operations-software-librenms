@@ -8,6 +8,7 @@ $options      = '-O qv';
 $oid          = '.1.3.6.1.4.1.8072.1.3.2.3.1.2.11.109.97.105.108.115.99.97.110.110.101.114';
 
 $mailscanner = snmp_get($device, $oid, $options);
+update_application($app, $mailscanner);
 
 echo ' mailscanner';
 
@@ -37,4 +38,3 @@ $fields = array(
 
 $tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
 data_update($device, 'app', $tags, $fields);
-update_application($app, $mailscanner, $fields);

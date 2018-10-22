@@ -1,9 +1,7 @@
 <?php
 
-use LibreNMS\Authentication\LegacyAuth;
-
 if ($_POST['editing']) {
-    if (LegacyAuth::user()->hasGlobalAdmin()) {
+    if ($_SESSION['userlevel'] > '7') {
         $poller_group = isset($_POST['poller_group']) ? clean($_POST['poller_group']) : 0;
         $snmp_enabled = ($_POST['snmp'] == 'on');
         if ($snmp_enabled) {
@@ -56,13 +54,12 @@ if ($_POST['editing']) {
             $update['features']     = null;
             $update['version']      = null;
             $update['icon']         = null;
-            $update['sysName']      = $_POST['sysName'] ? clean($_POST['sysName']) : null;
         }
 
         $device_tmp = deviceArray($device['hostname'], $community, $snmpver, $port, $transport, $v3, $port_assoc_mode);
         if ($no_checks === true || !$snmp_enabled || isSNMPable($device_tmp)) {
             $rows_updated = dbUpdate($update, 'devices', '`device_id` = ?', array($device['device_id']));
-
+            
             $max_repeaters_set = 0;
             $max_oid_set = 0;
 
@@ -123,12 +120,6 @@ echo "
     </div>
     <div id='snmp_override' style='display: ".($device['snmp_disable'] ? "block" : "none").";'>
     <div class='form-group'>
-    <label for='sysName' class='col-sm-2 control-label'>sysName (optional)</label>
-    <div class='col-sm-4'>
-    <input id='sysName' class='form-control' name='sysName' value='".$device['sysName']."'/>
-    </div>
-    </div>
-    <div class='form-group'>
     <label for='hardware' class='col-sm-2 control-label'>Hardware (optional)</label>
     <div class='col-sm-4'>
     <input id='hardware' class='form-control' name='hardware' value='".$device['hardware']."'/>
@@ -186,7 +177,8 @@ echo "      </select>
         <select name='port_assoc_mode' id='port_assoc_mode' class='form-control input-sm'>
 ";
 
-foreach (get_port_assoc_modes() as $pam_id => $pam) {
+foreach (get_port_assoc_modes() as $pam) {
+    $pam_id = get_port_assoc_mode_id($pam);
     echo "           <option value='$pam_id'";
 
     if ($pam_id == $device['port_association_mode']) {
@@ -239,13 +231,13 @@ echo "        </select>
     <div class='form-group'>
     <label for='authname' class='col-sm-2 control-label'>Auth User Name</label>
     <div class='col-sm-4'>
-    <input type='text' id='authname' name='authname' class='form-control' value='".$device['authname']."' autocomplete='off'>
+    <input type='text' id='authname' name='authname' class='form-control' value='".$device['authname']."'>
     </div>
     </div>
     <div class='form-group'>
     <label for='authpass' class='col-sm-2 control-label'>Auth Password</label>
     <div class='col-sm-4'>
-    <input type='password' id='authpass' name='authpass' class='form-control' value='".$device['authpass']."' autocomplete='off'>
+    <input type='password' id='authpass' name='authpass' class='form-control' value='".$device['authpass']."'>
     </div>
     </div>
     <div class='form-group'>
@@ -260,7 +252,7 @@ echo "        </select>
     <div class='form-group'>
     <label for='cryptopass' class='col-sm-2 control-label'>Crypto Password</label>
     <div class='col-sm-4'>
-    <input type='password' id='cryptopass' name='cryptopass' class='form-control' value='".$device['cryptopass']."' autocomplete='off'>
+    <input type='password' id='cryptopass' name='cryptopass' class='form-control' value='".$device['cryptopass']."'>
     </div>
     </div>
     <div class='form-group'>

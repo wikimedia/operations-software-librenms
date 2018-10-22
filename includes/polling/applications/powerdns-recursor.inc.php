@@ -57,6 +57,7 @@ if ($agent_data['app'][$name]) {
 }
 
 if (!empty($data)) {
+    update_application($app, $data);
     $ds_list = array(
         'all-outqueries' => 'DERIVE',
         'answers-slow' => 'DERIVE',
@@ -141,7 +142,6 @@ if (!empty($data)) {
     $rrd_name = array('app', 'powerdns', 'recursor', $app_id);
     $tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
     data_update($device, 'app', $tags, $fields);
-    update_application($app, $data, $fields);
 }
 
 unset($data, $stats, $rrd_def, $rrd_name, $rrd_keys, $tags, $fields);

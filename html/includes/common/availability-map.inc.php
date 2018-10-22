@@ -12,8 +12,6 @@
  * the source code distribution for details.
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-
 if (isset($widget_settings['mode_select']) && $widget_settings['mode_select'] !== '') {
     $mode = $widget_settings['mode_select'];
 } elseif (isset($_SESSION["map_view"]) && is_numeric($_SESSION["map_view"])) {
@@ -168,17 +166,23 @@ if (defined('SHOW_SETTINGS')) {
         // Only show devices if mode is 0 or 2 (Only Devices or both)
         if ($config['webui']['availability_map_use_device_groups'] != 0) {
             $device_group = 'SELECT `D`.`device_id` FROM `device_group_device` AS `D` WHERE `device_group_id` = ?';
-            $in_devices = dbFetchColumn($device_group, [$_SESSION['group_view']]);
+            $param = array($_SESSION['group_view']);
+            $devices = dbFetchRows($device_group, $param);
+            foreach ($devices as $in_dev) {
+                $in_devices[] = $in_dev['device_id'];
+            }
+            $in_devices = implode(',', $in_devices);
         }
 
         $sql = 'SELECT `D`.`hostname`, `D`.`sysName`, `D`.`device_id`, `D`.`status`, `D`.`uptime`, `D`.`os`, `D`.`icon`, `D`.`ignore`, `D`.`disabled` FROM `devices` AS `D`';
 
-        if (!LegacyAuth::user()->hasGlobalRead()) {
+        if (is_normal_user() === true) {
             $sql .= ' , `devices_perms` AS P WHERE D.`device_id` = P.`device_id` AND P.`user_id` = ? AND ';
-            $param = [LegacyAuth::id()];
+            $param = array(
+                $_SESSION['user_id']
+            );
         } else {
             $sql .= ' WHERE ';
-            $param = [];
         }
 
         if ($show_disabled_ignored != 1) {
@@ -187,9 +191,8 @@ if (defined('SHOW_SETTINGS')) {
             $sql .= '(`D`.`status` IN (0,1,2) OR `D`.`ignore` = 1 OR `D`.`disabled` = 1)';
         }
 
-        if ($config['webui']['availability_map_use_device_groups'] != 0 && !empty($in_devices)) {
-            $sql .= " AND `D`.`device_id` IN " . dbGenPlaceholders(count($in_devices));
-            $param = array_merge($param, $in_devices);
+        if ($config['webui']['availability_map_use_device_groups'] != 0 && isset($in_devices)) {
+            $sql .= " AND `D`.`device_id` IN ($in_devices)";
         }
 
         $sql .= " ORDER BY `".$deviceOrderBy."`";
@@ -253,12 +256,12 @@ if (defined('SHOW_SETTINGS')) {
     }
 
     if (($mode == 1 || $mode == 2) && ($config['show_services'] != 0)) {
-        if (LegacyAuth::user()->hasGlobalRead()) {
+        if (is_normal_user() === false) {
             $service_query = 'select `S`.`service_type`, `S`.`service_id`, `S`.`service_desc`, `S`.`service_status`, `D`.`hostname`, `D`.`sysName`, `D`.`device_id`, `D`.`os`, `D`.`icon` from services S, devices D where `S`.`device_id` = `D`.`device_id` ORDER BY '.$serviceOrderBy.';';
             $service_par = array();
         } else {
             $service_query = 'select `S`.`service_type`, `S`.`service_id`, `S`.`service_desc`, `S`.`service_status`, `D`.`hostname`, `D`.`sysName`, `D`.`device_id`, `D`.`os`, `D`.`icon` from services S, devices D, devices_perms P where `S`.`device_id` = `D`.`device_id` AND D.device_id = P.device_id AND P.user_id = ? ORDER BY '.$serviceOrderBy.';';
-            $service_par = array(LegacyAuth::id());
+            $service_par = array($_SESSION['user_id']);
         }
         $services = dbFetchRows($service_query, $service_par);
         if (count($services) > 0) {

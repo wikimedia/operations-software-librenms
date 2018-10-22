@@ -13,4 +13,4 @@
  */
 
 $version  = snmp_get($device, 'rbSwBank1Version.0', '-Osqnv', '+RADIO-BRIDGE-MIB');
-$hardware = $device['sysDescr'];
+$hardware = $poll_device['sysDescr'];

@@ -58,9 +58,9 @@ echo "<div style='margin: 5px;'><table border=0 cellspacing=0 cellpadding=0 widt
 $i = '0';
 foreach (dbFetchRows('SELECT * FROM `loadbalancer_rservers` WHERE `device_id` = ? ORDER BY `farm_id`', array($device['device_id'])) as $rserver) {
     if (is_integer($i / 2)) {
-        $bg_colour = $config['list_colour']['even'];
+        $bg_colour = $list_colour_a;
     } else {
-        $bg_colour = $config['list_colour']['odd'];
+        $bg_colour = $list_colour_b;
     }
 
     if ($rserver['StateDescr'] == 'Server is now operational') {

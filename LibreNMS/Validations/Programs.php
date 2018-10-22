@@ -26,9 +26,10 @@
 namespace LibreNMS\Validations;
 
 use LibreNMS\Config;
+use LibreNMS\Interfaces\ValidationGroup;
 use LibreNMS\Validator;
 
-class Programs extends BaseValidation
+class Programs implements ValidationGroup
 {
     /**
      * Validate this module.
@@ -39,7 +40,7 @@ class Programs extends BaseValidation
     public function validate(Validator $validator)
     {
         // Check programs
-        $bins = array('fping', 'fping6', 'rrdtool', 'snmpwalk', 'snmpget', 'snmpgetnext', 'snmpbulkwalk');
+        $bins = array('fping', 'fping6', 'rrdtool', 'snmpwalk', 'snmpget', 'snmpbulkwalk');
         foreach ($bins as $bin) {
             if (!($cmd = $this->findExecutable($bin))) {
                 $validator->fail(
@@ -48,47 +49,24 @@ class Programs extends BaseValidation
                     "\$config['$bin'] = '/path/to/$bin';"
                 );
             } elseif (in_array($bin, array('fping', 'fping6'))) {
-                $this->extraFpingChecks($validator, $bin, $cmd);
+                if ($validator->getUsername() == 'root' && ($getcap = $this->findExecutable('getcap'))) {
+                    if (!str_contains(shell_exec("$getcap $cmd"), "$cmd = cap_net_raw+ep")) {
+                        $validator->fail(
+                            "$bin should have CAP_NET_RAW!",
+                            "getcap c $cmd"
+                        );
+                    }
+                } elseif (!(fileperms($cmd) & 2048)) {
+                    $msg = "$bin should be suid!";
+                    $fix = "chmod u+s $cmd";
+                    if ($validator->getUsername() == 'root') {
+                        $msg .= ' (Note: suid may not be needed if CAP_NET_RAW is set, which requires root to check)';
+                        $validator->warn($msg, $fix);
+                    } else {
+                        $validator->fail($msg, $fix);
+                    }
+                }
             }
-        }
-    }
-
-    public function extraFpingChecks(Validator $validator, $bin, $cmd)
-    {
-        $target = ($bin == 'fping' ? '127.0.0.1' : '::1');
-        $validator->execAsUser("$cmd $target 2>&1", $output, $return);
-        $output = implode(" ", $output);
-
-        if ($return === 0 && $output == "$target is alive") {
-            return; // fping is working
-        }
-
-        if ($output == '::1 address not found') {
-            $validator->warn("fping6 does not have IPv6 support?!?!");
-            return;
-        }
-
-        if (str_contains($output, '::1 is unreachable') || str_contains($output, 'Address family not supported')) {
-            $validator->warn("IPv6 is disabled on your server, you will not be able to add IPv6 devices.");
-            return;
-        }
-
-        $validator->fail(
-            "$bin could not be executed. $bin must have CAP_NET_RAW capability (getcap) or suid. Selinux exlusions may be required.\n ($output)"
-        );
-
-        if ($getcap = $this->findExecutable('getcap')) {
-            $getcap_out = shell_exec("$getcap $cmd");
-            preg_match("#^$cmd = (.*)$#", $getcap_out, $matches);
-
-            if (is_null($matches) || !str_contains($matches[1], 'cap_net_raw+ep')) {
-                $validator->fail(
-                    "$bin should have CAP_NET_RAW!",
-                    "setcap cap_net_raw+ep $cmd"
-                );
-            }
-        } elseif (!(fileperms($cmd) & 2048)) {
-            $validator->fail("$bin should be suid!", "chmod u+s $cmd");
         }
     }
 
@@ -98,11 +76,24 @@ class Programs extends BaseValidation
             return Config::get($bin);
         }
 
-        $located = Config::locateBinary($bin);
-        if (is_executable($located)) {
-            return $located;
+        $path_dirs = explode(':', getenv('PATH'));
+        foreach ($path_dirs as $dir) {
+            $file = "$dir/$bin";
+            if (is_executable($file)) {
+                return $file;
+            }
         }
 
         return false;
+    }
+
+    /**
+     * Returns if this test should be run by default or not.
+     *
+     * @return bool
+     */
+    public function isDefault()
+    {
+        return true;
     }
 }

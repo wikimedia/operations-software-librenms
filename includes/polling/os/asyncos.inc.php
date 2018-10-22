@@ -27,8 +27,10 @@ $version = $regexp_results[0];
 preg_match('/[[\w]+-[\w]+/', $serial, $regexp_results);
 $serial = $regexp_results[0];
 
+$sysobjectid = $poll_device['sysObjectID'];
+
 # Get stats only if device is web proxy
-if (strcmp($device['sysObjectID'], '.1.3.6.1.4.1.15497.1.2') == 0) {
+if (strcmp($sysobjectid, 'enterprises.15497.1.2') == 0) {
     $connections = snmp_get($device, 'tcpCurrEstab.0', '-OQv', 'TCP-MIB');
 
     if (is_numeric($connections)) {

@@ -26,10 +26,11 @@
 namespace LibreNMS\Validations;
 
 use LibreNMS\Config;
+use LibreNMS\Interfaces\ValidationGroup;
 use LibreNMS\ValidationResult;
 use LibreNMS\Validator;
 
-class User extends BaseValidation
+class User implements ValidationGroup
 {
     /**
      * Validate this module.
@@ -48,7 +49,7 @@ class User extends BaseValidation
             if (isCli()) {
                 $validator->fail('You need to run this script as root' .
                     (Config::has('user') ? ' or ' . $lnms_username : ''));
-            } elseif (function_exists('posix_getgrnam')) {
+            } else {
                 $lnms_group = posix_getgrnam($lnms_groupname);
                 if (!in_array($username, $lnms_group['members'])) {
                     $validator->fail(
@@ -63,69 +64,66 @@ class User extends BaseValidation
         // Let's test the user configured if we have it
         if (Config::has('user')) {
             $dir = Config::get('install_dir');
-            $log_dir = Config::get('log_dir', "$dir/logs");
-            $rrd_dir = Config::get('rrd_dir', "$dir/rrd");
 
-            // generic fix
-            $fix = "sudo chown -R $lnms_username:$lnms_groupname $dir\n" .
-                "sudo setfacl -d -m g::rwx $rrd_dir $log_dir $dir/bootstrap/cache/ $dir/storage/\n" .
-                "sudo chmod -R ug=rwX $rrd_dir $log_dir $dir/bootstrap/cache/ $dir/storage/\n";
-
-            $find_result = rtrim(`find $dir \! -user $lnms_username -o \! -group $lnms_groupname 2> /dev/null`);
+            $find_result = rtrim(`find $dir \! -user $lnms_username -o \! -group $lnms_groupname &> /dev/null`);
             if (!empty($find_result)) {
-                // Ignore files created by the webserver
-                $ignore_files = array(
-                    "$log_dir/error_log",
-                    "$log_dir/access_log",
-                    "$dir/bootstrap/cache/",
-                    "$dir/storage/framework/cache/",
-                    "$dir/storage/framework/sessions/",
-                    "$dir/storage/framework/views/",
-                    "$dir/storage/debugbar/",
-                    "$dir/.pki/", // ignore files/folders created by setting the librenms home directory to the install directory
-                );
-
-                $files = array_filter(explode(PHP_EOL, $find_result), function ($file) use ($ignore_files) {
-                    if (starts_with($file, $ignore_files)) {
-                        return false;
-                    }
-
-                    return true;
-                });
+                // Ignore the two logs that may be created by the
+                $files = array_diff(explode(PHP_EOL, $find_result), array(
+                    "$dir/logs/error_log",
+                    "$dir/logs/access_log",
+                ));
 
                 if (!empty($files)) {
                     $result = ValidationResult::fail(
                         "We have found some files that are owned by a different user than $lnms_username, this " .
                         'will stop you updating automatically and / or rrd files being updated causing graphs to fail.'
                     )
-                        ->setFix($fix)
+                        ->setFix("chown -R $lnms_username:$lnms_groupname $dir")
                         ->setList('Files', $files);
 
                     $validator->result($result);
-                    return;
                 }
-            }
-
-            // check folder permissions
-            $folders = [
-                'rrd' => $rrd_dir,
-                'log' => $log_dir,
-                'bootstrap' => "$dir/bootstrap/cache/",
-                'storage' => "$dir/storage/",
-                'cache' => "$dir/storage/framework/cache/",
-                'sessions' => "$dir/storage/framework/sessions/",
-                'views' => "$dir/storage/framework/views/",
-            ];
-
-            $folders_string = implode(' ', $folders);
-            $incorrect = exec("find $folders_string -group $lnms_groupname ! -perm -g=w");
-            if (!empty($incorrect)) {
-                $validator->result(ValidationResult::fail(
-                    'Some folders have incorrect file permissions, this may cause issues.'
-                )->setFix($fix)->setList('Files', explode(PHP_EOL, $incorrect)));
             }
         } else {
             $validator->warn("You don't have \$config['user'] set, this most likely needs to be set to librenms");
         }
+
+        // check permissions
+        $rrd_dir = Config::get('rrd_dir');
+        if (!$this->checkFilePermissions($rrd_dir, '660')) {
+            $validator->fail("The rrd folder has improper permissions.", "chmod ug+rw $rrd_dir");
+        }
+
+        $log_dir = Config::get('log_dir');
+        if (!$this->checkFilePermissions($log_dir, '660')) {
+            $validator->fail("The log folder has improper permissions.", "chmod ug+rw $log_dir");
+        }
+    }
+
+    /**
+     * Checks file permissions against a minimum permissions mask.
+     * This only check that bits are enabled, not disabled.
+     * The mask is in the same format as posix permissions. For example, 600 means user read and write.
+     *
+     * @param string $file the name of the file to check
+     * @param $mask
+     * @return bool
+     */
+    private function checkFilePermissions($file, $mask)
+    {
+        $perms = fileperms($file);
+        $mask = octdec($mask);
+
+        return ($perms & $mask) === $mask;
+    }
+
+    /**
+     * Returns if this test should be run by default or not.
+     *
+     * @return bool
+     */
+    public function isDefault()
+    {
+        return true;
     }
 }

@@ -10,6 +10,6 @@
  * the source code distribution for details.
  */
 
-$explodeddata = explode(" ", $device['sysDescr']);
+$explodeddata = explode(" ", $poll_device['sysDescr']);
 $version = $explodeddata['6'];
 $hardware = $explodeddata['11'];

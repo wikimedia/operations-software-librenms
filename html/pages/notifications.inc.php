@@ -22,7 +22,6 @@
  * @subpackage Notifications
  */
 
-use LibreNMS\Authentication\LegacyAuth;
 use LibreNMS\ObjectCache;
 
 $notifications = new ObjectCache('notifications');
@@ -31,19 +30,7 @@ $notifications = new ObjectCache('notifications');
   <div class="row">
     <div class="col-md-12">
       <h1><a href="/notifications">Notifications</a></h1>
-      <h4>
-<?php
-echo '<strong class="count-notif">' . $notifications['count'] . '</strong> Unread Notifications ';
-
-if (LegacyAuth::user()->hasGlobalAdmin()) {
-    echo '<button class="btn btn-success pull-right fa fa-plus new-notif" data-toggle="tooltip" data-placement="bottom" title="Create new notification" style="margin-top:-10px;"></button>';
-}
-
-if ($notifications['count'] > 0 && !isset($vars['archive'])) {
-    echo '<button class="btn btn-success pull-right fa fa-eye read-all-notif" data-toggle="tooltip" data-placement="bottom" title="Mark all as Read" style="margin-top:-10px;"></button>';
-}
-?>
-      </h4>
+      <h4><strong class="count-notif"><?php echo $notifications['count']; ?></strong> Unread Notifications <?php echo ($_SESSION['userlevel'] == 10 ? '<button class="btn btn-success pull-right new-notif" style="margin-top:-10px;">New</button>' : ''); ?></h4>
       <hr/>
     </div>
   </div>
@@ -87,8 +74,8 @@ foreach ($notifications['sticky'] as $notif) {
     echo "<strong><i class='fa fa-bell-o'></i>&nbsp;${notif['title']}</strong>";
     echo "<span class='pull-right'>";
 
-    if ($notif['user_id'] != LegacyAuth::id()) {
-        $sticky_user = LegacyAuth::get()->getUser($notif['user_id']);
+    if ($notif['user_id'] != $_SESSION['user_id']) {
+        $sticky_user = get_user($notif['user_id']);
         echo "<code>Sticky by ${sticky_user['username']}</code>";
     } else {
         echo '<button class="btn btn-primary fa fa-bell-slash-o unstick-notif" data-toggle="tooltip" data-placement="bottom" title="Remove Sticky" style="margin-top:-10px;"></button>';
@@ -114,7 +101,7 @@ foreach ($notifications['sticky'] as $notif) {
 <?php
 foreach ($notifications['unread'] as $notif) {
     if (is_numeric($notif['source'])) {
-        $source_user = LegacyAuth::get()->getUser($notif['source']);
+        $source_user = get_user($notif['source']);
         $notif['source'] = $source_user['username'];
     }
     echo '<div class="well"><div class="row"> <div class="col-md-12">';
@@ -127,7 +114,7 @@ foreach ($notifications['unread'] as $notif) {
     }
     echo "<h4 class='$class' id='${notif['notifications_id']}'>${notif['title']}<span class='pull-right'>";
 
-    if (LegacyAuth::user()->hasGlobalAdmin()) {
+    if (is_admin()) {
         echo '<button class="btn btn-primary fa fa-bell-o stick-notif" data-toggle="tooltip" data-placement="bottom" title="Mark as Sticky" style="margin-top:-10px;"></button>';
     }
 ?>
@@ -170,7 +157,7 @@ foreach (array_reverse($notifications['read']) as $notif) {
     }
     echo  " id='${notif['notifications_id']}'>${notif['title']}";
 
-    if (LegacyAuth::user()->isAdmin()) {
+    if ($_SESSION['userlevel'] == 10) {
         echo '<span class="pull-right"><button class="btn btn-primary fa fa-bell-o stick-notif" data-toggle="tooltip" data-placement="bottom" title="Mark as Sticky" style="margin-top:-10px;"></button></span>';
     }
 ?>
@@ -234,37 +221,12 @@ $(function() {
           $("#message").html('<div class="alert alert-info">' + data.message + '</div>');
           $("#"+notif).parent().parent().parent().fadeOut();
           $(".count-notif").each(function(){
-              var new_count = this.innerHTML-1;
-              this.innerHTML = new_count;
-              if (new_count == 0) {
-                  $this = $(this);
-                  if ($this.hasClass('badge-danger')) {
-                      $this.removeClass('badge-danger');
-                  }
-              }
+            this.innerHTML = this.innerHTML-1;
           });
         }
         else {
           $(this).attr("disabled", false);
           $("#message").html('<div class="alert alert-info">' + data.message + '</div>');
-        }
-      }
-    });
-  });
-
-  $(document).on( "click", ".read-all-notif", function() {
-    $(this).attr("disabled", true);
-    $.ajax({
-      type: 'POST',
-      url: 'ajax_form.php',
-      data: {type: 'notifications', action: 'read-all-notif'},
-      dataType: "json",
-      success: function (data) {
-        if( data.status == "ok" ) {
-          window.location.reload()
-        }
-        else {
-          $(this).attr("disabled", false);
         }
       }
     });

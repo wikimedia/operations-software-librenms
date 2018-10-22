@@ -5,4 +5,4 @@ icon: hikvision
 over:
     - { graph: device_uptime, text: 'Device Uptime' }
 discovery:
-    - sysObjectID: .1.3.6.1.4.1.50001
+    - sysObjectId: .1.3.6.1.4.1.50001

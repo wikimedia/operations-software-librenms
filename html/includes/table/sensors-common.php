@@ -1,38 +1,21 @@
 <?php
-/*
- * LibreNMS
- *
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or (at your
- * option) any later version.  Please see LICENSE.txt at the top level of
- * the source code distribution for details.
- *
- * @package    LibreNMS
- * @subpackage webui
- * @link       http://librenms.org
- * @copyright  2018 LibreNMS
- * @author     LibreNMS Contributors
-*/
 
-use LibreNMS\Authentication\LegacyAuth;
-
-$graph_type = mres($vars['graph_type']);
-$unit       = mres($vars['unit']);
-$class      = mres($vars['class']);
+$graph_type = mres($_POST['graph_type']);
+$unit       = mres($_POST['unit']);
+$class      = mres($_POST['class']);
 
 $sql = " FROM `$table` AS S, `devices` AS D";
 
-if (!LegacyAuth::user()->hasGlobalRead()) {
+if (is_admin() === false && is_read() === false) {
     $sql .= ', devices_perms as P';
 }
 
 $sql .= " WHERE S.sensor_class=? AND S.device_id = D.device_id ";
-$param[] = mres($vars['class']);
+$param[] = mres($_POST['class']);
 
-if (!LegacyAuth::user()->hasGlobalRead()) {
+if (is_admin() === false && is_read() === false) {
     $sql .= " AND D.device_id = P.device_id AND P.user_id = ?";
-    $param[] = LegacyAuth::id();
+    $param[] = $_SESSION['user_id'];
 }
 
 if (isset($searchPhrase) && !empty($searchPhrase)) {
@@ -121,7 +104,7 @@ foreach (dbFetchRows($sql, $param) as $sensor) {
         'sensor_limit'     => is_null($sensor['sensor_limit']) ? '-' : round($sensor['sensor_limit'], 2).$unit,
     );
 
-    if ($vars['view'] == 'graphs') {
+    if ($_POST['view'] == 'graphs') {
         $daily_graph = 'graph.php?id='.$sensor['sensor_id'].'&amp;type='.$graph_type.'&amp;from='.$config['time']['day'].'&amp;to='.$config['time']['now'].'&amp;width=211&amp;height=100';
         $daily_url   = 'graph.php?id='.$sensor['sensor_id'].'&amp;type='.$graph_type.'&amp;from='.$config['time']['day'].'&amp;to='.$config['time']['now'].'&amp;width=400&amp;height=150';
 

@@ -26,15 +26,11 @@
 namespace LibreNMS\OS;
 
 use LibreNMS\Device\WirelessSensor;
-use LibreNMS\Interfaces\Discovery\ProcessorDiscovery;
 use LibreNMS\Interfaces\Discovery\Sensors\WirelessApCountDiscovery;
 use LibreNMS\Interfaces\Discovery\Sensors\WirelessClientsDiscovery;
 use LibreNMS\OS;
-use LibreNMS\OS\Shared\Cisco;
 
-class Ciscowlc extends Cisco implements
-    WirelessClientsDiscovery,
-    WirelessApCountDiscovery
+class Ciscowlc extends OS implements WirelessClientsDiscovery, WirelessApCountDiscovery
 {
     /**
      * Discover wireless client counts. Type is clients.

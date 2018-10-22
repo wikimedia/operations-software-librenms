@@ -4,9 +4,9 @@ $row = 1;
 
 foreach (dbFetchRows('SELECT * FROM `sensors` WHERE `sensor_class` = ? AND `device_id` = ? ORDER BY `sensor_descr`', array($class, $device['device_id'])) as $sensor) {
     if (!is_integer($row / 2)) {
-        $row_colour = $config['list_colour']['even'];
+        $row_colour = $list_colour_a;
     } else {
-        $row_colour = $config['list_colour']['odd'];
+        $row_colour = $list_colour_b;
     }
 
     if ($sensor['poller_type'] == "ipmi") {

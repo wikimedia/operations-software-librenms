@@ -3,7 +3,7 @@ group: supermicro
 text: 'Supermicro Switch'
 type: network
 icon: supermicro
-ifname: true
+ifname: 1
 mib_dir:
     - supermicro
 discovery:

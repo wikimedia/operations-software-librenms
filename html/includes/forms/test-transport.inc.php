@@ -12,16 +12,12 @@
  * the source code distribution for details.
  */
 
-use LibreNMS\Authentication\LegacyAuth;
-use LibreNMS\Config;
-
-if (!LegacyAuth::user()->hasGlobalAdmin()) {
+if (is_admin() === false) {
     header('Content-type: text/plain');
     die('ERROR: You need to be admin');
 }
 
-$transport = $vars['transport'] ?: null;
-$transport_id = $vars['transport_id'] ?: null;
+$transport = mres($_POST['transport']);
 
 require_once $config['install_dir'].'/includes/alerts.inc.php';
 $tmp = array(dbFetchRow('select device_id,hostname,sysDescr,version,hardware,location from devices order by device_id asc limit 1'));
@@ -39,7 +35,7 @@ $obj = array(
     "faults"    => false,
     "uid"       => "000",
     "severity"  => "critical",
-    "rule"      => "macros.device = 1",
+    "rule"      => "%macros.device = 1",
     "name"      => "Test-Rule",
     "string"      => "#1: test => string;",
     "timestamp" => date("Y-m-d H:i:s"),
@@ -48,21 +44,17 @@ $obj = array(
     "msg"       => "This is a test alert",
 );
 
-$response = ['status' => 'error'];
+$status = 'error';
 
-if ($transport_id) {
-    $transport = dbFetchCell("SELECT `transport_type` FROM `alert_transports` WHERE `transport_id` = ?", [$transport_id]);
-}
-$class  = 'LibreNMS\\Alert\\Transport\\' . ucfirst($transport);
-if (class_exists($class)) {
-    $opts = Config::get("alert.transports.$transport");
-    $instance = new $class($transport_id);
-    $result = $instance->deliverAlert($obj, $opts);
-    if ($result === true) {
-        $response['status'] = 'ok';
-    } else {
-        $response['message'] = $result;
+if (file_exists($config['install_dir']."/includes/alerts/transport.".$transport.".php")) {
+    $opts = $config['alert']['transports'][$transport];
+    if ($opts) {
+        eval('$tmp = function($obj,$opts) { global $config; '.file_get_contents($config['install_dir'].'/includes/alerts/transport.'.$transport.'.php').' return false; };');
+        $tmp = $tmp($obj,$opts);
+        if ($tmp) {
+            $status = 'ok';
+        }
     }
 }
 header('Content-type: application/json');
-echo json_encode($response);
+echo _json_encode(array('status' => $status));

@@ -1,7 +1,9 @@
 <?php
 
 if ($device['os'] == 'ironware' || $device['os_type'] == 'ironware') {
-    if (str_contains($device['sysDescr'], array('NetIron', 'MLX', 'CER')) === false) {
+    $is_netiron = snmp_get($device, 'sysObjectID.0', '-OvQ', 'FOUNDRY-SN-AGENT-MIB');
+
+    if (strpos($is_netiron, 'NI') === false && strpos($is_netiron, 'MLX') === false && strpos($is_netiron, 'Cer') === false) {
         echo 'Ironware Dynamic: ';
 
         $percent = snmp_get($device, 'snAgGblDynMemUtil.0', '-OvQ', 'FOUNDRY-SN-AGENT-MIB');

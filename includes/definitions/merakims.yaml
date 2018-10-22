@@ -2,7 +2,7 @@ os: merakims
 text: 'Meraki Switch'
 type: network
 icon: meraki
-ifname: true
+ifname: 1
 over:
     - { graph: device_bits, text: 'Device Traffic' }
 discovery:

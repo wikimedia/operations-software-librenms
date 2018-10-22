@@ -11,6 +11,7 @@ if (!empty($agent_data['app'][$name])) {
     $options = '-O qv';
     $oid     = '.1.3.6.1.4.1.8072.1.3.2.3.1.2.6.97.112.97.99.104.101';
     $apache  = snmp_get($device, $oid, $options);
+    update_application($app, $apache);
 }
 
 echo ' apache';
@@ -68,4 +69,3 @@ $fields = array(
 
 $tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
 data_update($device, 'app', $tags, $fields);
-update_application($app, $apache, $fields);

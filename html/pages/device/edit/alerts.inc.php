@@ -1,9 +1,6 @@
 <?php
-
-use LibreNMS\Authentication\LegacyAuth;
-
 if ($_POST['editing']) {
-    if (LegacyAuth::user()->hasGlobalAdmin()) {
+    if ($_SESSION['userlevel'] > '7') {
         $override_sysContact_bool = mres($_POST['override_sysContact']);
         if (isset($_POST['sysContact'])) {
             $override_sysContact_string = mres($_POST['sysContact']);

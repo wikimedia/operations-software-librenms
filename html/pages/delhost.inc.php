@@ -1,15 +1,13 @@
 <?php
 
-use LibreNMS\Authentication\LegacyAuth;
-
-if (!LegacyAuth::user()->hasGlobalAdmin()) {
+if ($_SESSION['userlevel'] < 10) {
     require 'includes/error-no-perm.inc.php';
     exit;
 }
 
 $pagetitle[] = "Delete device";
 
-if (LegacyAuth::user()->isDemoUser()) {
+if ($_SESSION['userlevel'] == 11) {
     demo_account();
 } else {
     if (is_numeric($_REQUEST['id'])) {
@@ -32,7 +30,7 @@ if (LegacyAuth::user()->isDemoUser()) {
       <input type="hidden" name="id" value="<?php echo $_REQUEST['id'] ?>" />
       <input type="hidden" name="confirm" value="1" />
       <!--<input type="hidden" name="remove_rrd" value="<?php echo $_POST['remove_rrd']; ?>">-->
-      <button type="submit" class="btn btn-danger">Confirm device deletion</button>
+      <button type="submit" class="btn btn-danger">Confirm host deletion</button>
     </div>
   </form>
 </center>

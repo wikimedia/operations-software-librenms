@@ -7,5 +7,5 @@ discovery:
     -
       sysDescr_regex:
           - '/^NWA/'
-      sysObjectID:
+      sysObjectId:
           - '.1.3.6.1.4.1.890.1.15'

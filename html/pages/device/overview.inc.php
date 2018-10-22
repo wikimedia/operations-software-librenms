@@ -2,23 +2,23 @@
 
 $overview = 1;
 
-$ports['total']    = dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE device_id = ? AND `disabled` = 0", array($device['device_id']));
-$ports['up']       = dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE device_id = ? AND `ifOperStatus` = 'up' AND `ifAdminStatus` = 'up' AND `disabled` = 0", array($device['device_id']));
-$ports['down']     = dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE device_id = ? AND `ifOperStatus` = 'down' AND `ifAdminStatus` = 'up' AND `disabled` = 0", array($device['device_id']));
-$ports['disabled'] = dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE device_id = ? AND `ifAdminStatus` = 'down' AND `disabled` = 0", array($device['device_id']));
+$ports['total']    = dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE device_id = ?", array($device['device_id']));
+$ports['up']       = dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE device_id = ? AND `ifOperStatus` = 'up' AND `ifAdminStatus` = 'up'", array($device['device_id']));
+$ports['down']     = dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE device_id = ? AND `ifOperStatus` = 'down' AND `ifAdminStatus` = 'up'", array($device['device_id']));
+$ports['disabled'] = dbFetchCell("SELECT COUNT(*) FROM `ports` WHERE device_id = ? AND `ifAdminStatus` = 'down'", array($device['device_id']));
 
 $services = get_service_status($device['device_id']);
 $services['total'] = array_sum($services);
 
 if ($services[2]) {
-    $services_colour = $config['warn_colour'];
+    $services_colour = $warn_colour_a;
 } else {
-    $services_colour = $config['list_colour']['even'];
+    $services_colour = $list_colour_a;
 }
 if ($ports['down']) {
-    $ports_colour = $config['warn_colour'];
+    $ports_colour = $warn_colour_a;
 } else {
-    $ports_colour = $config['list_colour']['even'];
+    $ports_colour = $list_colour_a;
 }
 
 echo('
@@ -72,12 +72,6 @@ require 'overview/sensors/airflow.inc.php';
 require 'overview/sensors/snr.inc.php';
 require 'overview/sensors/pressure.inc.php';
 require 'overview/sensors/cooling.inc.php';
-require 'overview/sensors/delay.inc.php';
-require 'overview/sensors/quality_factor.inc.php';
-require 'overview/sensors/chromatic_dispersion.inc.php';
-require 'overview/sensors/ber.inc.php';
-require 'overview/sensors/eer.inc.php';
-require 'overview/sensors/waterflow.inc.php';
 require 'overview/eventlog.inc.php';
 require 'overview/services.inc.php';
 require 'overview/syslog.inc.php';

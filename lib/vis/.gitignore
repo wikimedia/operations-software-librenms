@@ -1,0 +1,11 @@
+.idea
+.c9
+*.iml
+node_modules
+.project
+.settings/
+npm-debug.log
+
+# vim temporary files
+.*.sw[op]
+test/

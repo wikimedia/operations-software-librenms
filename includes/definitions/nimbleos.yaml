@@ -4,9 +4,8 @@ type: storage
 icon: nimble
 over:
     - { graph: device_bits, text: 'Device Traffic' }
-    - { graph: device_storage, text: 'Storage Usage' }
-mib_dir:
-    - nimble
+    - { graph: device_processor, text: 'Processor Usage' }
+    - { graph: device_mempool, text: 'Memory Usage' }
 discovery:
     - sysDescr:
-        -  'Nimble Storage'
+        -  Nimble Storage

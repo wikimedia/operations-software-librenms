@@ -1,12 +1,12 @@
 #!/usr/bin/php
 <?php
 
-use LibreNMS\Authentication\LegacyAuth;
+use Phpass\PasswordHash;
 
-$options = getopt('u:rldvh');
-if (isset($options['h']) || (!isset($options['l']) && !isset($options['u']))) {
+$options = getopt('u:rdvh');
+if (isset($options['h']) || !isset($options['u'])) {
     echo ' -u <username>  (Required) username to test
- -l             List all users (checks that auth can enumerate all allowed users)
+ -r             Reauthenticate user, (requires previous web login with "Remember me" enabled)
  -d             Enable debug output
  -v             Enable verbose debug output
  -h             Display this help message
@@ -14,23 +14,24 @@ if (isset($options['h']) || (!isset($options['l']) && !isset($options['u']))) {
     exit;
 }
 
+$test_username = $options['u'];
+
 if (isset($options['d'])) {
     $debug = true;
 }
 
-$init_modules = [];
-require realpath(__DIR__ . '/..') . '/includes/init.php';
-
 if (isset($options['v'])) {
-    // Enable debug mode for auth methods that have it
-    $config['auth_ad_debug'] = 1;
-    $config['auth_ldap_debug'] = 1;
+    // might need more options for other auth methods
+    $config['auth_ad_debug'] = 1; // active_directory
 }
+
+$init_modules = array('web', 'auth');
+require realpath(__DIR__ . '/..') . '/includes/init.php';
 
 echo "Authentication Method: {$config['auth_mechanism']}\n";
 
 // if ldap like, check selinux
-if ($config['auth_mechanism'] == 'ldap' || $config['auth_mechanism'] == "active_directory") {
+if ($config['auth_mechanism'] = 'ldap' || $config['auth_mechanism'] = "active_directory") {
     $enforce = shell_exec('getenforce 2>/dev/null');
     if (str_contains($enforce, 'Enforcing')) {
         // has selinux
@@ -41,59 +42,50 @@ if ($config['auth_mechanism'] == 'ldap' || $config['auth_mechanism'] == "active_
         }
     }
 }
-try {
-    $authorizer = LegacyAuth::get();
 
-    // AD bind tests
-    if ($authorizer instanceof \LibreNMS\Authentication\ActiveDirectoryAuthorizer) {
-        // peek inside the class
-        $lc_rp = new ReflectionProperty($authorizer, 'ldap_connection');
-        $lc_rp->setAccessible(true);
-        $adbind_rm = new ReflectionMethod($authorizer, 'bind');
-        $adbind_rm->setAccessible(true);
-
-        $bind_success = false;
-        if (isset($config['auth_ad_binduser']) && isset($config['auth_ad_bindpassword'])) {
-            $bind_success = $adbind_rm->invoke($authorizer, false, true);
-            if (!$bind_success) {
-                $ldap_error = ldap_error($lc_rp->getValue($authorizer));
-                echo $ldap_error . PHP_EOL;
-                if ($ldap_error == 'Invalid credentials') {
-                    print_error('AD bind failed for user ' . $config['auth_ad_binduser'] . '@' . $config['auth_ad_domain'] .
-                        '. Check $config[\'auth_ad_binduser\'] and $config[\'auth_ad_bindpassword\'] in your config.php');
-                }
-            } else {
-                print_message('AD bind success');
+if (function_exists('ad_bind')) {
+    if (isset($config['auth_ad_binduser']) && isset($config['auth_ad_bindpassword'])) {
+        if (!ad_bind($ldap_connection, false)) {
+            $ldap_error = ldap_error($ldap_connection);
+            echo $ldap_error . PHP_EOL;
+            if ($ldap_error == 'Invalid credentials') {
+                print_error('AD bind failed for user ' . $config['auth_ad_binduser'] . '@' . $config['auth_ad_domain'] .
+                    '. Check $config[\'auth_ad_binduser\'] and $config[\'auth_ad_bindpassword\'] in your config.php');
             }
         } else {
-            $bind_success = $adbind_rm->invoke($authorizer, true, true);
-            if (!$bind_success) {
-                echo ldap_error($lc_rp->getValue($authorizer)) . PHP_EOL;
-                print_message("Could not anonymous bind to AD");
-            } else {
-                print_message('AD bind anonymous successful');
-            }
+            print_message('AD bind success');
         }
-
-        if (!$bind_success) {
-            print_error("Could not bind to AD, you will not be able to use the API or alert AD users");
+    } else {
+        if (!ad_bind($ldap_connection)) {
+            echo ldap_error($ldap_connection) . PHP_EOL;
+            print_message("Could not anonymous bind to AD");
+        } else {
+            print_message('AD bind anonymous successful');
         }
     }
+}
 
-    if (isset($options['l'])) {
-        $users = $authorizer->getUserlist();
-        $output = array_map(function ($user) {
-            return "{$user['username']} ({$user['user_id']})";
-        }, $users);
+$auth = false;
+if (isset($options['r'])) {
+    echo "Reauthenticate Test\n";
 
-        echo "Users: " . implode(', ', $output) . PHP_EOL;
-        echo "Total users: " . count($users) . PHP_EOL;
+    $session = dbFetchRow('SELECT * FROM `session` WHERE `session_username`=? ORDER BY `session_id` DESC LIMIT 1', array($test_username));
+    d_echo($session);
+    if (empty($session)) {
+        print_error('Requires previous login with \'Remember me\' box checked on the webui');
         exit;
     }
 
-    $test_username = $options['u'];
-    $auth = false;
+    $hasher   = new PasswordHash(8, false);
+    $token = $session['session_username'] . '|' . $hasher->HashPassword($session['session_username'] . $session['session_token']);
 
+    $auth = reauthenticate($session['session_value'], $token);
+    if ($auth) {
+        print_message("Reauthentication successful.\n");
+    } else {
+        print_error('Reauthentication failed or is unsupported');
+    }
+} else {
     echo 'Password: ';
     `stty -echo`;
     $test_password = trim(fgets(STDIN));
@@ -101,7 +93,7 @@ try {
     echo PHP_EOL;
 
     echo "Authenticate user $test_username: \n";
-    $auth = $authorizer->authenticate($test_username, $test_password);
+    $auth = authenticate($test_username, $test_password);
     unset($test_password);
 
     if ($auth) {
@@ -112,26 +104,23 @@ try {
         }
         print_error('AUTH FAILURE');
     }
+}
 
-    if ($auth) {
-        $user_id = $authorizer->getUserid($test_username);
+if ($auth) {
+    $user_id = get_userid($test_username);
 
-        echo "User ($user_id):\n";
-        if (method_exists($authorizer, 'getUser')) {
-            $user = $authorizer->getUser($user_id);
+    echo "User:\n";
+    if (function_exists('get_user')) {
+        $user = get_user($user_id);
 
-            unset($user['password']);
-            unset($user['remember_token']);
-            foreach ($user as $property => $value) {
-                echo "  $property => $value\n";
-            }
-        }
-
-        if (method_exists($authorizer, 'getGroupList')) {
-            echo 'Groups: ' . implode('; ', $authorizer->getGroupList()) . PHP_EOL;
+        unset($user['password']);
+        unset($user['remember_token']);
+        foreach ($user as $property => $value) {
+            echo "  $property => $value\n";
         }
     }
-} catch (Exception $e) {
-    echo "Error: " . get_class($e) . " thrown!\n";
-    echo $e->getMessage() . PHP_EOL;
+
+    if (function_exists('get_group_list')) {
+        echo 'Groups: ' . implode('; ', get_group_list()) . PHP_EOL;
+    }
 }

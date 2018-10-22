@@ -24,7 +24,7 @@
  */
 
 $rrd = rrd_name($device['hostname'], array('app', 'powerdns-recursor', $app['app_id']));
-if (rrdtool_check_rrd_exists($rrd)) {
+if (is_file($rrd)) {
     $rrd_filename = $rrd;
 }
 $simple_rrd = true;

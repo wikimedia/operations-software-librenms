@@ -7,9 +7,9 @@ if (empty($graph_array['device'])) {
 }
 // FIXME not css alternating yet
 if (!is_integer($g_i / 2)) {
-    $row_colour = $config['list_colour']['even'];
+    $row_colour = $list_colour_a;
 } else {
-    $row_colour = $config['list_colour']['odd'];
+    $row_colour = $list_colour_b;
 }
 echo '<div class="panel panel-default">
     <div class="panel-heading">

@@ -1,8 +1,7 @@
 os: serveriron
 text: 'Brocade ServerIron'
 type: loadbalancer
-group: brocade
-ifname: true
+ifname: 1
 over:
     - { graph: device_bits, text: 'Device Traffic' }
     - { graph: device_processor, text: 'CPU Usage' }

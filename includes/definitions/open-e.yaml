@@ -9,7 +9,7 @@ over:
     - { graph: device_diskio, text: 'Disk I/O' }
 discovery:
     - sysDescr: Open-E
-processor_stacked: true
+processor_stacked: 1
 ignore_mount_string:
     - /mnt/live
     - /RAMDISK

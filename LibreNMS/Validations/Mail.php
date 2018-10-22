@@ -26,11 +26,11 @@
 namespace LibreNMS\Validations;
 
 use LibreNMS\Config;
+use LibreNMS\Interfaces\ValidationGroup;
 use LibreNMS\Validator;
 
-class Mail extends BaseValidation
+class Mail implements ValidationGroup
 {
-    protected static $RUN_BY_DEFAULT = false;
 
     /**
      * Validate this module.
@@ -46,7 +46,7 @@ class Mail extends BaseValidation
                 $validator->fail('default_mail config option needs to be specified to test email');
                 $run_test = 0;
             } elseif (Config::get('email_backend') == 'sendmail') {
-                if (!Config::has('email_sendmail_path')) {
+                if (Config::has('email_sendmail_path')) {
                     $validator->fail("You have selected sendmail but not configured email_sendmail_path");
                     $run_test = 0;
                 } elseif (!file_exists(Config::get('email_sendmail_path'))) {
@@ -78,5 +78,15 @@ class Mail extends BaseValidation
                 }
             }
         }//end if
+    }
+
+    /**
+     * Returns if this test should be run by default or not.
+     *
+     * @return bool
+     */
+    public function isDefault()
+    {
+        return false;
     }
 }

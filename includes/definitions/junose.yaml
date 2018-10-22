@@ -7,9 +7,9 @@ over:
     - { graph: device_processor, text: 'CPU Usage' }
     - { graph: device_mempool, text: 'Memory Usage' }
 poller_modules:
-    junose-atm-vp: true
+    junose-atm-vp: 1
 discovery_modules:
-    junose-atm-vp: true
+    junose-atm-vp: 1
 discovery:
-    - sysObjectID:
+    - sysObjectId:
         - .1.3.6.1.4.1.4874

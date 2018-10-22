@@ -1,26 +1,28 @@
 #!/usr/bin/env php
 <?php
 
-$init_modules = ['alerts', 'laravel'];
+$init_modules = array('alerts');
 require __DIR__ . '/../includes/init.php';
 
 $options = getopt('t:h:r:p:s:d::');
 
-if (isset($options['r']) && isset($options['h'])) {
-    set_debug(isset($options['d']));
-
-    $rule_id = (int)$options['r'];
+if ($options['r'] && $options['h']) {
+    if (isset($options['d'])) {
+        $debug = true;
+        ini_set('display_errors', 1);
+        ini_set('display_startup_errors', 1);
+        ini_set('log_errors', 1);
+        ini_set('error_reporting', 1);
+    }
+    $rule_id = $options['r'];
     $device_id = ctype_digit($options['h']) ? $options['h'] : getidbyname($options['h']);
-    $where = "alerts.device_id = $device_id && alerts.rule_id = $rule_id";
-    $alerts = loadAlerts($where);
-    if (empty($alerts)) {
+    $alert = dbFetchRow('SELECT alert_log.id,alert_log.rule_id,alert_log.device_id,alert_log.state,alert_log.details,alert_log.time_logged,alert_rules.rule,alert_rules.severity,alert_rules.extra,alert_rules.name FROM alert_log,alert_rules WHERE alert_log.rule_id = alert_rules.id && alert_log.device_id = ? && alert_log.rule_id = ? && alert_rules.disabled = 0 ORDER BY alert_log.id DESC LIMIT 1', array($device_id, $rule_id));
+    if (empty($alert)) {
         echo "No active alert found, please check that you have the correct ids";
         exit(2);
     }
-    $alert = $alerts[0];
-
+    $alert['details'] = json_decode(gzuncompress($alert['details']), true);
     $alert['details']['delay'] = 0;
-    $alert['note'] = 'Testing';
     IssueAlert($alert);
 } else {
     c_echo("

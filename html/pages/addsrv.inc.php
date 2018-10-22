@@ -1,14 +1,10 @@
 <?php
 
-use LibreNMS\Authentication\LegacyAuth;
-
-$no_refresh = true;
-
-if (!LegacyAuth::user()->hasGlobalAdmin()) {
+if ($_SESSION['userlevel'] < '10') {
     include 'includes/error-no-perm.inc.php';
 } else {
     if ($vars['addsrv']) {
-        if (LegacyAuth::user()->hasGlobalAdmin()) {
+        if ($_SESSION['userlevel'] >= '10') {
             $updated = '1';
 
             $service_id = add_service($vars['device'], $vars['type'], $vars['descr'], $vars['ip'], $vars['params'], 0);
@@ -18,8 +14,12 @@ if (!LegacyAuth::user()->hasGlobalAdmin()) {
             }
         }
     }
-    foreach (list_available_services() as $current_service) {
-        $servicesform .= "<option value='$current_service'>$current_service</option>";
+
+    foreach (scandir($config['nagios_plugins']) as $file) {
+        if (substr($file, 0, 6) === 'check_') {
+            $check_name = substr($file, 6);
+            $servicesform .= "<option value='$check_name'>$check_name</option>";
+        }
     }
 
     foreach (dbFetchRows('SELECT * FROM `devices` ORDER BY `hostname`') as $device) {

@@ -4,7 +4,6 @@ source: os/Settings.md
 This page documents settings that can be set in the os yaml files or in config.php.
 All settings listed here are optional. If they are not set, the global default will be used.
 
-### User override in config.php
 Users can override these settings in their config.php.
 
 For example, to set an alternate icon for ios:
@@ -34,18 +33,6 @@ good_if: # ignore all other bad_if settings ifDescr (substring, case insensitive
 
 ```
 
-### Controlling interface labels
-By default we use ifDescr to label ports/interfaces.
-Setting either `ifname` or `ifalias` will override that.  Only set one of these.  ifAlias is user supplied.
-`ifindex` will append the ifindex to the port label.
-
-```yaml
-ifname: true
-ifalias: true
-
-ifindex: true
-```
-
 ### Disable snmpbulkwalk
 Some devices have buggy snmp implementations and don't respond well to the more efficient snmpbulkwalk.
 To disable snmpbulkwalk and only use snmpwalk for an os set the following.
@@ -61,9 +48,9 @@ Usually, a poller module will not work if it's corresponding discovery module is
 
 ```yaml
 poller_modules:
-    bgp-peers: true
+    bgp-peers: 1
 discovery_modules:
-    arp-table: false
+    arp-table: 0
 ```
 
 ### Storage Settings

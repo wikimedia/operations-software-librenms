@@ -25,7 +25,7 @@
 
 namespace LibreNMS\Tests;
 
-class SyslogTest extends TestCase
+class SyslogTest extends \PHPUnit_Framework_TestCase
 {
 
     // The format is:

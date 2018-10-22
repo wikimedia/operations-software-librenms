@@ -1,30 +1,16 @@
 <?php
-/*
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or (at your
- * option) any later version.  Please see LICENSE.txt at the top level of
- * the source code distribution for details.
- *
- * @package    LibreNMS
- * @subpackage webui
- * @link       http://librenms.org
- * @copyright  2017 LibreNMS
- * @author     LibreNMS Contributors
-*/
 
 $common_output[] = '
 <div class="table-responsive">
     <table id="syslog" class="table table-hover table-condensed table-striped">
         <thead>
             <tr>
-                <th data-column-id="label"></th>
-                <th data-column-id="timestamp" data-order="desc">Timestamp</th>
-                <th data-column-id="level">Level</th>
+                <th data-column-id="priority">&nbsp;</th>
+                <th data-column-id="timestamp" data-order="desc">Datetime</th>
                 <th data-column-id="device_id">Hostname</th>
                 <th data-column-id="program">Program</th>
                 <th data-column-id="msg">Message</th>
-                <th data-column-id="priority">Priority</th>
+                <th data-column-id="status">Message</th>
             </tr>
         </thead>
     </table>
@@ -37,14 +23,22 @@ var syslog_grid = $("#syslog").bootgrid({
     post: function ()
     {
         return {
-            device: "' . addcslashes($vars['device'], '"') . '",
-            program: "' . addcslashes($vars['program'], '"') . '",
-            priority: "' . addcslashes($vars['priority'], '"') . '",
-            to: "' . addcslashes($vars['to'], '"') . '",
-            from: "' . addcslashes($vars['from'], '"') . '",
+            id: "syslog",
+            device: "'.mres($vars['device']) .'",
+            program: "'.mres($vars['program']).'",
+            priority: "'.mres($vars['priority']).'",
+            to: "'.mres($vars['to']).'",
+            from: "'.mres($vars['from']).'",
         };
     },
-    url: "ajax/table/syslog"
+    url: "ajax_table.php",
+    statusMappings: {
+        // Nagios style
+        0: "text-muted",
+        1: "warning",
+        2: "danger",
+        3: "info"
+    }
 });
 
 </script>
