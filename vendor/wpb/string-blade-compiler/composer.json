@@ -1,0 +1,22 @@
+{
+    "name": "wpb/string-blade-compiler",
+    "description": "Laravel Blade String Compiler, render string as blade templates",
+    "keywords": ["laravel", "blade", "compiler"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Terre Porter",
+            "email": "tporter@webpage-builders.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.6.4",
+        "laravel/framework": "5.8.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Wpb\\String_Blade_Compiler\\": "src/"
+        }
+    },
+    "minimum-stability": "dev"
+}

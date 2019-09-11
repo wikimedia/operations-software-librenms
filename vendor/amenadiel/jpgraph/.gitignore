@@ -1,0 +1,14 @@
+*bak*
+
+*sublime*
+
+old_src
+vendor
+fabfile*
+.php.tools.ini
+.env
+jpgraph.phprj
+.codelite
+jpgraph.workspace
+nbproject
+.idea
