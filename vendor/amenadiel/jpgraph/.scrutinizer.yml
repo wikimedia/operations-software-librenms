@@ -1,0 +1,34 @@
+checks:
+    php: true
+build:
+    environment:
+          php:
+            version: '7.1'
+            ini:
+                'zend_extension': 'xdebug.so'
+    nodes:
+        tests: true
+        analysis:
+            tests:
+                override:
+                    -
+                        command: phpcs-run
+                        use_website_config: true
+                    -
+                        command: make test_coverage
+                        coverage:
+                            file: 'tests/_output/coverage.xml'
+                            format: 'clover'
+                    - php-scrutinizer-run
+
+
+
+tools:
+    php_code_coverage: true
+
+filter:
+    excluded_paths:
+        - 'Examples/'
+        - 'tests/'
+    dependency_paths:
+        - 'vendor/'
