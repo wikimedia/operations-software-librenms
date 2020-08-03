@@ -1,0 +1,7 @@
+/vendor/
+/tests/Browser/console
+/tests/Browser/screenshots
+composer.phar
+composer.lock
+.idea
+/build/

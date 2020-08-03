@@ -1,0 +1,49 @@
+{
+    "name": "darkghosthunter/larapoke",
+    "description": "Keep your forms alive, avoid TokenMismatchException by gently poking your Laravel app",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Italo Baeza C.",
+            "email": "darkghosthunter@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.2",
+        "illuminate/routing": "^6.0||^7.0",
+        "illuminate/support": "^6.0||^7.0",
+        "illuminate/view": "^6.0||^7.0",
+        "illuminate/http": "^6.0||^7.0"
+    },
+    "require-dev": {
+        "laravel/ui" : "^1.0||^2.0",
+        "orchestra/testbench": "^4.1||^5.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "DarkGhostHunter\\Larapoke\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "DarkGhostHunter\\Larapoke\\LarapokeServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
