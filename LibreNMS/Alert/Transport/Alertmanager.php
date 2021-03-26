@@ -44,9 +44,7 @@ class Alertmanager extends Transport
             $alertmanager_status => date('c'),
             'generatorURL' => Url::deviceUrl($alert_data['device_id']),
             'annotations' => [
-                'summary' => $alert_data['name'],
-                'title' => $alert_data['title'],
-                'description' => $alertmanager_msg,
+                'summary' => $alert_data['title'],
             ],
             'labels' => [
                 'alertname' => $alert_data['name'],
