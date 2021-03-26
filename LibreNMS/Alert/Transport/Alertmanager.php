@@ -38,7 +38,6 @@ class Alertmanager extends Transport
         $url = $this->config['alertmanager-url'];
         $username = $this->config['alertmanager-username'];
         $password = $this->config['alertmanager-password'];
-
         $alertmanager_status = $alert_data['state'] == AlertState::RECOVERED ? 'endsAt' : 'startsAt';
         $alertmanager_msg = strip_tags($alert_data['msg']);
 
