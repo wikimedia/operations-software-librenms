@@ -42,7 +42,7 @@ class Alertmanager extends Transport
         } else {
             $alertmanager_status = 'startsAt';
         }
-        $gen_url = (Config::get('base_url') . 'device/device=' . $obj['device_id']);
+        $gen_url = (Config::get('base_url') . 'device/device=' . $obj['device_id']. '/alerts');
         $alertmanager_msg = strip_tags($obj['msg']);
         $data = [[
             $alertmanager_status => date('c'),
