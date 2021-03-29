@@ -50,6 +50,7 @@ class Alertmanager extends Transport
             'annotations' => [
                 'summary' => $obj['title'],
                 'description' => $alertmanager_msg,
+                'timestamp' => $obj['timestamp'],
             ],
             'labels' => [
                 'alertname' => $obj['name'],
