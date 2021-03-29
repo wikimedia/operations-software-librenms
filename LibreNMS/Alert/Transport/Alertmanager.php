@@ -47,6 +47,8 @@ class Alertmanager extends Transport
             'generatorURL' => $gen_url,
             'annotations' => [
                 'summary' => $alert_data['title'],
+                'description' => $alertmanager_msg,
+                'timestamp' => $alert_data['timestamp'],
             ],
             'labels' => [
                 'alertname' => $alert_data['name'],
