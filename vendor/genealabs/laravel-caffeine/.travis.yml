@@ -1,0 +1,31 @@
+dist: trusty
+language: php
+sudo: required
+
+addons:
+    chrome: stable
+
+php:
+    - 7.2
+    - 7.3
+
+before_script:
+    - travis_retry composer self-update
+    - travis_retry composer install --no-interaction --dev --prefer-dist --no-suggest
+    - google-chrome-stable --headless --disable-gpu --remote-debugging-port=9222 http://localhost &
+
+script:
+  - ./vendor/bin/phpunit --coverage-text --coverage-clover ./build/logs/clover.xml
+
+after_script:
+  - php vendor/bin/coveralls
+  - wget https://scrutinizer-ci.com/ocular.phar
+  - php ocular.phar code-coverage:upload --format=php-clover ./build/logs/clover.xml
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/30886f28c25b1e31088f
+    on_success: change  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start: never     # options: [always|never|change] default: always
