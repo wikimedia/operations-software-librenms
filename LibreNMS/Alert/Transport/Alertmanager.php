@@ -30,6 +30,7 @@ use LibreNMS\Enum\AlertState;
 use LibreNMS\Exceptions\AlertTransportDeliveryException;
 use LibreNMS\Util\Http;
 use LibreNMS\Util\Url;
+use LibreNMS\Config;
 
 class Alertmanager extends Transport
 {
@@ -40,11 +41,13 @@ class Alertmanager extends Transport
         $url = $this->config['alertmanager-url'];
         $username = $this->config['alertmanager-username'];
         $password = $this->config['alertmanager-password'];
+
         $alertmanager_status = $alert_data['state'] == AlertState::RECOVERED ? 'endsAt' : 'startsAt';
         $alertmanager_msg = strip_tags((string) $alert_data['msg']);
+        $gen_url = (Config::get('base_url') . 'device/device=' . $alert_data['device_id']. '/alerts');
         $data = [[
             $alertmanager_status => date('c'),
-            'generatorURL' => Url::deviceUrl($alert_data['device_id']),
+            'generatorURL' => $gen_url,
             'annotations' => [
                 'summary' => $alert_data['title'],
                 'description' => $alertmanager_msg,
