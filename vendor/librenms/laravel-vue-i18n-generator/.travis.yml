@@ -1,0 +1,61 @@
+language: php
+
+os:
+  - linux
+
+php:
+  - 5.6
+  - 7.4
+  - 8.0
+  - 8.1
+
+env:
+  - TESTBENCH_VERSION=^3 PHPUNIT_VERSION=^5
+  - TESTBENCH_VERSION=^4 PHPUNIT_VERSION=^8
+  - TESTBENCH_VERSION=^5 PHPUNIT_VERSION=^8
+  - TESTBENCH_VERSION=^6 PHPUNIT_VERSION=^8
+  - TESTBENCH_VERSION=^7 PHPUNIT_VERSION=^9
+
+matrix:
+  exclude:
+    - php: 5.6
+      env: TESTBENCH_VERSION=^4 PHPUNIT_VERSION=^8
+    - php: 5.6
+      env: TESTBENCH_VERSION=^5 PHPUNIT_VERSION=^8
+    - php: 5.6
+      env: TESTBENCH_VERSION=^6 PHPUNIT_VERSION=^8
+    - php: 5.6
+      env: TESTBENCH_VERSION=^7 PHPUNIT_VERSION=^9
+    - php: 7.4
+      env: TESTBENCH_VERSION=^3 PHPUNIT_VERSION=^5
+    - php: 7.4
+      env: TESTBENCH_VERSION=^4 PHPUNIT_VERSION=^8
+    - php: 7.4
+      env: TESTBENCH_VERSION=^5 PHPUNIT_VERSION=^8
+    - php: 7.4
+      env: TESTBENCH_VERSION=^7 PHPUNIT_VERSION=^9
+    - php: 8.0
+      env: TESTBENCH_VERSION=^3 PHPUNIT_VERSION=^5
+    - php: 8.0
+      env: TESTBENCH_VERSION=^4 PHPUNIT_VERSION=^8
+    - php: 8.0
+      env: TESTBENCH_VERSION=^5 PHPUNIT_VERSION=^8
+    - php: 8.1
+      env: TESTBENCH_VERSION=^3 PHPUNIT_VERSION=^5
+    - php: 8.1
+      env: TESTBENCH_VERSION=^4 PHPUNIT_VERSION=^8
+    - php: 8.1
+      env: TESTBENCH_VERSION=^5 PHPUNIT_VERSION=^8
+    - php: 8.1
+      env: TESTBENCH_VERSION=^6 PHPUNIT_VERSION=^8
+
+before_install:
+  - composer self-update
+  - composer require "orchestra/testbench:${TESTBENCH_VERSION}" --no-update --prefer-dist
+  - composer require "phpunit/phpunit:${PHPUNIT_VERSION}" --no-update --prefer-dist
+
+install:
+  - travis_retry composer install --no-interaction --prefer-dist
+
+script:
+  - vendor/phpunit/phpunit/phpunit
