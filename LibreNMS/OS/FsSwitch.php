@@ -41,10 +41,22 @@ class FsSwitch extends OS implements ProcessorDiscovery
     {
         $processors = [];
 
+        // Get the number of CPUs
+        $num_cpus_data = snmpwalk_cache_oid($this->getDeviceArray(), 'ssCpuNumCpus', [], 'UCD-SNMP-MIB');
+        $num_cpus = isset($num_cpus_data[0]['ssCpuNumCpus']) ? $num_cpus_data[0]['ssCpuNumCpus'] : 1;
+
+        // Get the tick rate dynamically - default to 100 if not available
+        $tick_rate_data = snmpwalk_cache_oid($this->getDeviceArray(), 'sysClkRate', [], 'HOST-RESOURCES-MIB');
+        $ticks_per_second = isset($tick_rate_data[0]['sysClkRate']) ? $tick_rate_data[0]['sysClkRate'] : 100;
+
         // Tests OID from SWITCH MIB.
-        $processors_data = snmpwalk_cache_oid($this->getDeviceArray(), 'ssCpuIdle', [], 'SWITCH', 'fs');
+        $processors_data = snmpwalk_cache_oid($this->getDeviceArray(), 'ssCpuRawIdle', [], 'SWITCH', 'fs');
 
         foreach ($processors_data as $index => $entry) {
+            // Calculate total ticks for all CPUs
+            $total_ticks = $num_cpus * $ticks_per_second;
+            $idle_percentage = ($entry['ssCpuRawIdle'] / $total_ticks) * 100;
+
             $processors[] = Processor::discover(
                 'fs-SWITCHMIB',
                 $this->getDeviceId(),
@@ -52,7 +64,7 @@ class FsSwitch extends OS implements ProcessorDiscovery
                 $index,
                 'CPU',
                 -1,
-                100 - $entry['ssCpuIdle']
+                100 - $idle_percentage
             );
         }
 
