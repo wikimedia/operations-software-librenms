@@ -1,0 +1,70 @@
+{
+    "name": "ziggy-js",
+    "version": "2.6.0",
+    "description": "Use your Laravel named routes in JavaScript.",
+    "keywords": [
+        "laravel",
+        "routes",
+        "ziggy"
+    ],
+    "homepage": "https://github.com/tighten/ziggy",
+    "bugs": "https://github.com/tighten/ziggy/issues",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/tighten/ziggy.git"
+    },
+    "authors": [
+        {
+            "name": "Daniel Coulbourne",
+            "email": "daniel@tighten.co"
+        },
+        {
+            "name": "Jake Bathman",
+            "email": "jake@tighten.co"
+        },
+        {
+            "name": "Jacob Baker-Kretzmar",
+            "email": "jacob@tighten.co"
+        }
+    ],
+    "files": [
+        "src/js/index.d.ts",
+        "dist"
+    ],
+    "type": "module",
+    "source": "./src/js/index.js",
+    "exports": {
+        "types": "./src/js/index.d.ts",
+        "default": "./dist/index.js"
+    },
+    "module": "./dist/index.esm.js",
+    "types": "./src/js/index.d.ts",
+    "scripts": {
+        "build": "npm run build:esm && npm run build:umd",
+        "build:esm": "microbundle -i ./src/js/index.js -o ./dist/index.js --format modern,esm --no-sourcemap --no-generateTypes --external none",
+        "build:npm": "microbundle -i ./src/js/index.js -o ./dist/index.js --format modern,esm --no-sourcemap --no-generateTypes",
+        "build:umd": "microbundle -i ./src/js/browser.js -o ./dist/route.js --format umd --name route --no-sourcemap --no-generateTypes --external none",
+        "test": "vitest --typecheck",
+        "format": "prettier . --write",
+        "prepublishOnly": "rm -r ./dist/* && npm run build:npm"
+    },
+    "mangle": {
+        "regex": "^_(?!query)"
+    },
+    "dependencies": {
+        "qs-esm": "^7.0.2"
+    },
+    "devDependencies": {
+        "jsdom": "^27.0.0",
+        "microbundle": "^0.15.1",
+        "prettier": "^3.6.2",
+        "typescript": "^5.9.2",
+        "vitest": "^3.2.4"
+    },
+    "prettier": {
+        "printWidth": 100,
+        "singleQuote": true,
+        "tabWidth": 4
+    }
+}
