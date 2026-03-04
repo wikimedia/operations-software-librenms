@@ -1,0 +1,201 @@
+#
+# The MIT License
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+
+version: 2.1
+
+commands:
+  influxdb-onboarding:
+    steps:
+      - run:
+          name: "Post onBoarding request to InfluxDB 2"
+          command: sh ./scripts/influxdb-onboarding.sh
+  prepare:
+    description: "Prepare environment to tests"
+    steps:
+      - checkout
+      - influxdb-onboarding
+  test:
+    parameters:
+      php-image:
+        type: string
+      xdebug-package:
+        type: string
+    steps:
+      - restore_cache:
+          name: Restoring Composer Cache
+          keys:
+              - composer-v3-{{ checksum "composer.json" }}-<< parameters.php-image >>
+              - composer-v3-{{ checksum "composer.json" }}
+              - composer-v3-
+      - run:
+          name: Install dependencies
+          command: |
+            composer install -n --prefer-dist
+      - run:
+          name: Install xdebug
+          command: |
+            sudo pecl install << parameters.xdebug-package >>
+      - run:
+          name: Run tests
+          command: |
+            export XDEBUG_MODE=coverage
+            vendor/bin/phpunit tests --coverage-clover=coverage.xml
+      - run:
+          name: Collecting coverage reports
+          command: |
+            curl -Os https://uploader.codecov.io/latest/linux/codecov
+            curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+            curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+            curl -s https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
+            gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+            shasum -a 256 -c codecov.SHA256SUM
+            chmod +x ./codecov
+            ./codecov
+      - save_cache:
+          name: Saving Cache
+          key: composer-v3-{{ checksum "composer.json" }}-<< parameters.php-image >>
+          paths:
+            - vendor
+          when: always
+  storing-test-results:
+    steps:
+      - store_test_results:
+          path: build/
+
+jobs:
+  tests-php:
+    parameters:
+      php-image:
+        type: string
+        default: &default-php-image "cimg/php:7.4"
+      influxdb-image:
+        type: string
+        default: &default-influxdb-image "influxdb:latest"
+      xdebug-package:
+        type: string
+        default: "xdebug-3.1.6"
+    docker:
+      - image: << parameters.php-image >>
+      - image: &influx-image << parameters.influxdb-image >>
+        environment:
+          INFLUXD_HTTP_BIND_ADDRESS: :8086
+    steps:
+      - prepare
+      - test:
+          php-image: << parameters.php-image >>
+          xdebug-package: << parameters.xdebug-package >>
+      - storing-test-results
+  tests-cURL:
+    docker:
+      - image: *default-php-image
+      - image: *default-influxdb-image
+        environment:
+          INFLUXD_HTTP_BIND_ADDRESS: :8086
+    steps:
+      - prepare
+      - restore_cache:
+          name: Restoring Composer Cache
+          keys:
+            - http-client-v1-{{ checksum "composer.json" }}
+            - http-client-v1-
+      - run:
+          name: Install dependencies
+          command: |
+            composer install -n --prefer-dist
+            composer remove --dev guzzlehttp/guzzle guzzlehttp/psr7
+            composer require --dev nyholm/psr7 php-http/curl-client
+      - run:
+          name: Run tests
+          command: |
+            vendor/bin/phpunit tests --group "integration"
+      - save_cache:
+          name: Saving Cache
+          key: http-client-v1-{{ checksum "composer.json" }}
+          paths:
+            - vendor
+          when: always
+      - storing-test-results
+  tests-windows:
+    machine:
+      image: "windows-server-2019-vs2019:stable"
+      resource_class: windows.medium
+      shell: bash
+    steps:
+      - checkout
+      - run: choco install php --version=7.3.15 --params '"/ThreadSafe /InstallDir:c:\tools\php"'
+      - run: cp ~/project/.circleci/php.ini /c/tools/php/
+      - run: /c/tools/php/php.exe -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      - run: /c/tools/php/php.exe composer-setup.php
+      - run: /c/tools/php/php.exe composer.phar install
+      - run: |
+          export PATH=/c/tools/php/:$PATH
+          ./vendor/bin/phpunit --exclude-group "integration" --log-junit build/junit.xml
+      - storing-test-results
+  check-code-style:
+    docker:
+      - image: *default-php-image
+    steps:
+      - checkout
+      - run: |
+          mkdir -p tools/php-cs-fixer
+          composer require --working-dir=tools/php-cs-fixer friendsofphp/php-cs-fixer:2.18.7
+          tools/php-cs-fixer/vendor/bin/php-cs-fixer fix --dry-run --verbose --show-progress=estimating --using-cache=no --diff
+
+workflows:
+  version: 2
+  build:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - tests-php:
+          name: php-7.4
+      - tests-php:
+          name: php-8.0
+          php-image: "cimg/php:8.0"
+      - tests-php:
+          name: php-8.1
+          php-image: "cimg/php:8.1"
+      - tests-php:
+          name: php-8.2
+          php-image: "cimg/php:8.2"
+          xdebug-package: "xdebug"
+      - tests-php:
+          name: php-7.4-nightly
+          influxdb-image: "quay.io/influxdb/influxdb:nightly"
+      - tests-php:
+          name: php-7.3
+          php-image: "cimg/php:7.3"
+      - tests-php:
+          name: php-7.2
+          php-image: "cimg/php:7.2"
+      - tests-windows:
+          name: php-windows
+      - tests-cURL:
+          name: php-cURL-client
+      - check-code-style
+
+  nightly:
+    when:
+      equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - tests-php
