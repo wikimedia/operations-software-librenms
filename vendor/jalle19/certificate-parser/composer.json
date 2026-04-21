@@ -1,0 +1,33 @@
+{
+    "name": "jalle19/certificate-parser",
+    "description": "A proper SSL/TLS certificate parser library for PHP",
+    "keywords": ["certificate", "parser", "tls", "ssl"],
+    "homepage": "https://github.com/Jalle19/certificate-parser",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sam Stenvall",
+            "email": "sam.stenvall@nordsoftware.com"
+        }
+    ],
+    "require": {
+        "php": ">= 8.2",
+        "ext-openssl": "*",
+        "acmephp/ssl": "^2.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Jalle19\\CertificateParser\\": "src/",
+            "Jalle19\\CertificateParser\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": [
+            "phpunit"
+        ]
+    }
+}
