@@ -1,0 +1,7 @@
+<phpunit>
+    <testsuites>
+        <testsuite name="certificate-parser">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

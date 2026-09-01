@@ -1,0 +1,52 @@
+<?php
+
+namespace DummyNamespace;
+
+use App\Models\User;
+use Illuminate\Auth\Access\HandlesAuthorization;
+use {{ modelQualified }};
+
+class {{ class }}
+{
+    use HandlesAuthorization;
+
+    public function allowRestify(User $user = null): bool
+    {
+        return true;
+    }
+
+    public function show(User $user = null, {{ model }} $model): bool
+    {
+        return true;
+    }
+
+    public function store(User $user): bool
+    {
+        return false;
+    }
+
+    public function storeBulk(User $user): bool
+    {
+        return false;
+    }
+
+    public function update(User $user, {{ model }} $model): bool
+    {
+        return false;
+    }
+
+    public function updateBulk(User $user, {{ model }} $model): bool
+    {
+        return false;
+    }
+
+    public function deleteBulk(User $user, {{ model }} $model): bool
+    {
+        return false;
+    }
+
+    public function delete(User $user, {{ model }} $model): bool
+    {
+        return false;
+    }
+}

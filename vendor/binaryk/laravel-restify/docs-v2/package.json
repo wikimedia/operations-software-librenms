@@ -1,0 +1,19 @@
+{
+    "name": "laravel-restify-docs",
+    "version": "1.0.0",
+    "description": "Demonstration of @nuxt/content-theme-docs.\n\nhttps://content.nuxtjs.org/theme-docs",
+    "author": "binarcode",
+    "private": true,
+    "scripts": {
+        "dev": "MINIMAL=1 CSB=1 nuxt",
+        "build": "NODE_OPTIONS=--openssl-legacy-provider nuxt build",
+        "start": "nuxt start",
+        "generate": "NODE_OPTIONS=--openssl-legacy-provider nuxt generate",
+        "post-update": "yarn upgrade --latest"
+    },
+    "dependencies": {
+        "@nuxt/content-theme-docs": "0.10.1",
+        "@nuxtjs/gtm": "^2.4.0",
+        "nuxt": "^2.15.8"
+    }
+}
